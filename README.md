@@ -50,10 +50,10 @@ automatically:
 
     python3 -m pip install .
 
-For offline development against an adjacent Library checkout, install that
-checkout first and then install this project with no dependency resolution.
+For offline development against a local Limitless Library checkout, install
+that checkout first and then install this project with no dependency resolution.
 
-    python3 -m pip install ../limitlesslibrary
+    python3 -m pip install /path/to/limitlesslibrary
     python3 -m pip install --no-deps -e .
 
 ## Use the companion CLI

@@ -12,6 +12,6 @@ Expected disposition:
 
     source-free-method
 
-The adjacent draft is retained solely to make the sealed capsule inspectable.
+The matching draft is retained solely to make the sealed capsule inspectable.
 Reseal it with Limitless Library whenever its contents change; do not hand edit
 the digest-bound capsule record.
