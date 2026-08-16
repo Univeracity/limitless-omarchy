@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: scripts/smoke-omarchy-panel --catalog PATH [--summon]
+
+Runs non-mutating checks in an Omarchy Quattro session:
+  1. validates this repository with Omarchy's native plugin validator;
+  2. queries the supplied local Limitless catalog; and
+  3. with --summon only, confirms the plugin is already installed and opens it.
+
+This script never installs, enables, updates, removes, or shares a plugin.
+USAGE
+}
+
+catalog=""
+summon=0
+
+while (($#)); do
+  case "$1" in
+    --catalog)
+      (($# >= 2)) || { usage >&2; exit 2; }
+      catalog=$2
+      shift 2
+      ;;
+    --summon)
+      summon=1
+      shift
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+[[ -n $catalog && -d $catalog ]] || {
+  printf '%s\n' 'A readable --catalog directory is required.' >&2
+  exit 2
+}
+
+for command in omarchy omarchy-shell limitless-omarchy jq; do
+  command -v "$command" >/dev/null || {
+    printf 'Required command is unavailable: %s\n' "$command" >&2
+    exit 2
+  }
+done
+
+repo_root=$(cd -- "$(dirname -- "$0")/.." && pwd -P)
+plugin_id=$(jq -er '.id' "$repo_root/manifest.json")
+
+omarchy plugin validate "$repo_root"
+limitless-omarchy query --catalog "$catalog"
+
+if ((summon == 0)); then
+  printf '%s\n' 'Native validation and local query completed. Re-run with --summon to open an already installed panel.'
+  exit 0
+fi
+
+omarchy plugin list --json | jq -e --arg id "$plugin_id" '
+  if type == "array" then any(.[]; .id == $id) else false end
+' >/dev/null || {
+  printf 'Plugin is not installed: %s\n' "$plugin_id" >&2
+  printf '%s\n' 'Install and explicitly enable it with Omarchy before using --summon.' >&2
+  exit 2
+}
+
+payload=$(jq -cn --arg catalog "$catalog" '{catalogPath: $catalog}')
+omarchy-shell shell summon "$plugin_id" "$payload"
+printf '%s\n' 'Panel summoned. Confirm its visible local-only/result state, then dismiss it with Escape.'

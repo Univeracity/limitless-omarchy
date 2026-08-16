@@ -1,0 +1,14 @@
+include LICENSE
+include NOTICE
+include README.md
+include SECURITY.md
+include manifest.json
+include pyproject.toml
+recursive-include .github *.yml
+recursive-include docs *.md
+recursive-include examples *.json *.md
+recursive-include plugin *.qml
+recursive-include scripts smoke-omarchy-panel
+recursive-include scripts *.py
+recursive-include tests *.py
+recursive-include tests/runtime Dockerfile *.qml

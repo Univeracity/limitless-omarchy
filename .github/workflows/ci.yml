@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install development tools and the pinned public core
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Test
+        run: python -m pytest -q
+      - name: Lint
+        run: ruff check src tests
+      - name: Check formatting
+        run: ruff format --check src tests
+      - name: Build source distribution
+        run: python -m build --sdist --outdir dist
+      - name: Verify source distribution contents
+        run: python scripts/verify-distribution.py dist/limitless_omarchy-*.tar.gz
+      - name: Install and exercise the source distribution
+        run: |
+          python -m venv /tmp/limitless-omarchy-sdist
+          /tmp/limitless-omarchy-sdist/bin/pip install dist/limitless_omarchy-*.tar.gz
+          /tmp/limitless-omarchy-sdist/bin/limitless-omarchy query --catalog examples/catalog > /tmp/limitless-omarchy-sdist-query.json
+          /tmp/limitless-omarchy-sdist/bin/python -c "import json; assert json.load(open('/tmp/limitless-omarchy-sdist-query.json'))['disposition'] == 'source-free-method'"
+
+  omarchy-contract:
+    name: Omarchy plugin contract
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the pinned Quattro plugin validator
+        run: |
+          git init omarchy-contract
+          git -C omarchy-contract remote add origin https://github.com/basecamp/omarchy.git
+          git -C omarchy-contract fetch --depth=1 origin 30f7a06090dc20dd1a4a8d0c99bfb8e2370df2ec
+          git -C omarchy-contract checkout --detach FETCH_HEAD
+      - name: Validate the distributable plugin
+        run: omarchy-contract/bin/omarchy-plugin-validate .

@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "limitless-omarchy"
+version = "0.1.0a0"
+description = "Local-first Limitless Library adapter for Omarchy customizations."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{name = "Limitless Library"}]
+dependencies = [
+  "limitless-library @ git+https://github.com/univeracity/limitlesslibrary.git@3cc4839f87202422541a6aaa57a97d635f87f409",
+]
+keywords = ["agents", "omarchy", "quickshell", "reuse", "verification"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Environment :: X11 Applications :: Qt",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Desktop Environment",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2,<2",
+  "pytest>=9.0.3,<10",
+  "ruff>=0.12,<1",
+]
+
+[project.scripts]
+limitless-omarchy = "limitless_omarchy.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+exclude = ["build", "dist"]
+line-length = 120
+target-version = "py311"

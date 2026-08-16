@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# JavaScript and frontend tooling
+node_modules/
+dist/
+build/
+.cache/
+
+# Local configuration and generated evidence
+.env
+.env.*
+!.env.example
+.limitless/
+receipts/
+evidence/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp

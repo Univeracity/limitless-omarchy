@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "limitless.capsule/0.1",
+  "id": "capsule:omarchy.reading-focus-method",
+  "version": "0.1.0",
+  "title": "Reading-focus source-free method",
+  "license": "Apache-2.0",
+  "offers": [
+    {
+      "id": "offer:omarchy.reading-focus-method",
+      "kind": "method",
+      "priority": 100,
+      "taskKind": "omarchy-customization",
+      "compatibility": {
+        "constraints": [
+          "linux",
+          "omarchy",
+          "omarchy-plugin-schema-v1"
+        ],
+        "toolchain": {
+          "omarchyPluginSchema": [
+            "1"
+          ]
+        }
+      },
+      "policy": {
+        "allowedUses": [
+          "adopt"
+        ],
+        "tenantScopes": [
+          "private"
+        ],
+        "state": "active"
+      },
+      "files": null,
+      "method": {
+        "summary": "Create a receiver-local reading-focus layout without copying another user's private configuration.",
+        "steps": [
+          "Identify the target application and its native Omarchy or application configuration surface.",
+          "Create the smallest receiver-local change that hides nonessential chrome while preserving an obvious exit path.",
+          "Keep the change in a user-owned configuration location and do not overwrite an existing file."
+        ],
+        "verification": [
+          "Confirm the target application still launches.",
+          "Confirm the owner can restore the prior layout without deleting unrelated configuration.",
+          "Confirm no private configuration was fetched from another user."
+        ]
+      }
+    }
+  ]
+}
