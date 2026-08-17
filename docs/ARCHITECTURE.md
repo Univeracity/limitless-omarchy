@@ -39,9 +39,19 @@ actions.
 
 ## Native surface
 
-The Quattro panel is a standalone third-party panel. It calls the companion
-CLI only on the local machine. A caller can supply a catalog path in the
-summon payload; otherwise the panel shows its local-only posture.
+The Quattro panel is a standalone third-party panel with a paired bar widget,
+so an enabled plugin has a visible UI entry point. It owns the normal local
+setup and query flow: an explicit panel action creates an isolated runtime
+under `XDG_DATA_HOME` and installs this reviewed adapter plus its pinned public
+Library dependency there. It never modifies the system Python, requires MCP
+configuration, or makes a service connection.
+
+The panel invokes a bundled runtime script rather than assuming the companion
+CLI exists on `PATH`. The script accepts an explicit plugin-root argument,
+requires an absolute XDG data directory, and has only `status`, `setup`,
+`query`, and `query-demo` actions. Setup is never automatic. A caller can
+still prefill a catalog path in a summon payload, or enter one through the
+panel UI.
 
 No UI path silently installs, enables, or shares a customization. Exact
 components remain subject to Omarchy's native Git installation, validation,

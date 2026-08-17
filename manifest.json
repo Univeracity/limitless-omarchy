@@ -4,12 +4,21 @@
   "name": "Limitless Library",
   "version": "0.1.0",
   "author": "Univeracity",
-  "description": "Local-first verified reuse before Omarchy customization work",
+  "description": "Local-first verified reuse for Omarchy and general agent work",
   "kinds": [
-    "panel"
+    "panel",
+    "bar-widget"
   ],
   "entryPoints": {
-    "panel": "plugin/Panel.qml"
+    "panel": "plugin/Panel.qml",
+    "barWidget": "plugin/BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Limitless Library",
+    "description": "Open local verified reuse",
+    "category": "Tools",
+    "allowMultiple": false,
+    "defaultSection": "right"
   },
   "keepLoaded": true
 }

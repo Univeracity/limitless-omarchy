@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+# Local runtime owned by the Limitless Omarchy panel.
+#
+# It never installs globally. Setup is invoked only by an explicit UI action
+# and creates an isolated runtime beneath the user's XDG data directory.
+
+set -euo pipefail
+
+status_json() {
+  local mode=$1
+  local reason=$2
+  printf '%s\n' \
+    "{\"schemaVersion\":\"limitless.omarchy-status/0.1\",\"mode\":\"${mode}\",\"service\":{\"connected\":false,\"reason\":\"${reason}\"}}"
+}
+
+fail() {
+  printf 'limitless-omarchy runtime: %s\n' "$1" >&2
+  exit 2
+}
+
+usage() {
+  cat <<'USAGE'
+Usage: limitless-omarchy-runtime ACTION --plugin-root PATH [--catalog PATH]
+
+Actions:
+  status      report whether the panel-owned local runtime is available
+  setup       explicitly create or update the isolated local runtime
+  query       query a selected local catalog before an Omarchy customization
+  query-demo  query the checked-in local example catalog
+
+The panel invokes this script itself. It is also intentionally usable as a
+lower-level diagnostic surface; it never installs into the system Python.
+USAGE
+}
+
+action=${1:-}
+[[ -n $action ]] || { usage >&2; exit 2; }
+shift
+
+plugin_root=""
+catalog=""
+while (($#)); do
+  case "$1" in
+    --plugin-root)
+      (($# >= 2)) || fail "--plugin-root requires a directory"
+      plugin_root=$2
+      shift 2
+      ;;
+    --catalog)
+      (($# >= 2)) || fail "--catalog requires a directory"
+      catalog=$2
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "unrecognized argument: $1"
+      ;;
+  esac
+done
+
+case "$action" in
+  status|setup|query|query-demo) ;;
+  *)
+    fail "unrecognized action: $action"
+    ;;
+esac
+
+[[ -n $plugin_root && -d $plugin_root && -f $plugin_root/pyproject.toml ]] \
+  || fail "a readable plugin root is required"
+plugin_root=$(cd -- "$plugin_root" && pwd -P)
+
+if [[ -z ${XDG_DATA_HOME:-} || $XDG_DATA_HOME != /* ]]; then
+  if [[ $action == status ]]; then
+    status_json "setup-required" "xdg-data-home-unavailable"
+    exit 0
+  fi
+  fail "XDG_DATA_HOME must name an absolute directory"
+fi
+
+runtime_root=$XDG_DATA_HOME/limitless-omarchy
+runtime=$runtime_root/runtime
+runtime_cli=$runtime/bin/limitless-omarchy
+
+runtime_available() {
+  [[ -d $runtime && ! -L $runtime && -x $runtime_cli && ! -L $runtime_cli ]]
+}
+
+setup_runtime() {
+  local python_command
+
+  command -v python3 >/dev/null || fail "Python 3 is required to create the isolated local runtime"
+  python_command=$(command -v python3)
+  if [[ -e $runtime_root || -L $runtime_root ]]; then
+    [[ -d $runtime_root && ! -L $runtime_root ]] || fail "the runtime root is not a directory"
+  else
+    mkdir -p -- "$runtime_root"
+  fi
+
+  if runtime_available; then
+    PIP_DISABLE_PIP_VERSION_CHECK=1 "$runtime/bin/python" -m pip install \
+      --disable-pip-version-check --no-input --upgrade "$plugin_root" >&2
+    return
+  fi
+
+  if [[ -e $runtime || -L $runtime ]]; then
+    [[ -d $runtime && ! -L $runtime ]] || fail "the incomplete runtime path is not a directory"
+    rm -rf -- "$runtime"
+  fi
+  "$python_command" -m venv "$runtime"
+  PIP_DISABLE_PIP_VERSION_CHECK=1 "$runtime/bin/python" -m pip install \
+    --disable-pip-version-check --no-input "$plugin_root" >&2
+}
+
+case "$action" in
+  status)
+    if runtime_available; then
+      exec "$runtime_cli" status
+    fi
+    status_json "setup-required" "local-runtime-not-installed"
+    ;;
+  setup)
+    setup_runtime
+    exec "$runtime_cli" status
+    ;;
+  query)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    [[ -n $catalog && -d $catalog ]] || fail "a readable local catalog is required"
+    exec "$runtime_cli" query --catalog "$catalog"
+    ;;
+  query-demo)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    exec "$runtime_cli" query --catalog "$plugin_root/examples/catalog"
+    ;;
+esac

@@ -1,6 +1,7 @@
 # Limitless Library for Omarchy
 
-Local-first verified reuse for Omarchy customizations.
+Local-first verified reuse for Omarchy customizations and, when explicitly
+enabled, general local agent work.
 
 Before an agent creates a new customization, this adapter lets it ask whether
 one owner-authorized prior result is eligible for the current Omarchy receiver.
@@ -25,8 +26,8 @@ or a source-free method.
 
 ## Local-first boundary
 
-The adapter works without a Limitless account or network connection. Its
-default companion CLI:
+The adapter works without a Limitless account or service connection. Its panel
+runtime and optional companion CLI:
 
 - derives only a minimal receiver profile;
 - does not inspect the user's plugin list, arbitrary desktop configuration,
@@ -39,24 +40,48 @@ later coordinate private catalogs, identity, scopes, revocation, and
 owner-authorized sharing. Connecting must never publish local work; capture
 and sharing remain separate actions.
 
-## Prerequisites
+## Use it from Omarchy
 
-- An Omarchy release with the Quattro plugin contract.
-- Python 3.11 or later.
-- A local installation of Limitless Library.
+Add and enable the reviewed repository through **Setup › Plugins**. The
+Limitless Library `L` button will appear in the right side of the bar. Click
+it, then select **Install local runtime**. The panel creates its own isolated
+runtime beneath your XDG data directory; it does not alter the system Python,
+require an agent, configure MCP, or connect to a service.
 
-Install the adapter. Its pinned public Limitless Library dependency is fetched
-automatically:
+The first explicit setup needs Python 3 and network access to install the
+pinned public Library dependency into that isolated runtime. Once complete,
+the panel itself is the normal way to use Limitless Omarchy:
+
+1. Click **Try included example** to inspect a fully local source-free method.
+2. Paste an absolute path to an owner-controlled local catalog.
+3. Click **Query local catalog** before a material customization.
+
+The panel never installs or enables a desktop change, captures a session, or
+shares work. It only creates the per-user runtime after the explicit button
+press, queries the catalog you select, and shows a component, method, or safe
+abstention.
+
+Omarchy currently opens a terminal for its third-party-plugin Add flow so that
+its review warning and clone output remain visible. That host-controlled step
+precedes this plugin. No terminal or agent-side setup is required to operate
+Limitless once the plugin has been reviewed and enabled.
+
+## Optional command-line control
+
+The CLI remains available for development, automation, diagnostics, and MCP
+clients; it is not a prerequisite for the panel. Install it directly when you
+want that lower-level control. Its pinned public Limitless Library dependency
+is fetched automatically:
 
     python3 -m pip install .
 
 For offline development against a local Limitless Library checkout, install
-that checkout first and then install this project with no dependency resolution.
+that checkout first and then install this project with no dependency resolution:
 
     python3 -m pip install /path/to/limitlesslibrary
     python3 -m pip install --no-deps -e .
 
-## Use the companion CLI
+## Companion CLI
 
 Inspect the minimal local receiver profile:
 
@@ -129,19 +154,19 @@ owner's explicit choice to expose general local reuse through the same
 installed package. Either can be configured with an MCP client; run only the
 one or ones the owner intends to offer.
 
-## Install the Quattro panel
+## Install from the command line (optional)
 
-Once the companion CLI is installed, add the repository through Omarchy's
-normal reviewable Git flow:
+The UI path above is preferred. If you want to manage the plugin through the
+shell, add it through Omarchy's normal reviewable Git flow:
 
     omarchy plugin add https://github.com/univeracity/limitless-omarchy.git
     omarchy plugin enable univeracity.limitless-library
 
-The panel is then summoned with:
+The panel can then be summoned with:
 
     omarchy-shell shell summon univeracity.limitless-library '{}'
 
-To query from the panel, supply a local catalog path in the summon payload:
+To prefill a catalog path in the panel, supply it in the summon payload:
 
     omarchy-shell shell summon univeracity.limitless-library \
       '{"catalogPath":"/absolute/path/to/catalog"}'

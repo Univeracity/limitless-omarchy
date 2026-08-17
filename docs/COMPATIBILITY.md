@@ -5,8 +5,8 @@
 This initial adapter targets Omarchy's Quattro plugin contract:
 
 - plugin manifest schema version 1;
-- a third-party, non-reserved panel identifier;
-- a QML panel entry point;
+- a third-party, non-reserved panel and bar-widget identifier;
+- QML panel and bar-widget entry points;
 - native validation through the Omarchy plugin validation command; and
 - native reload or discovery through the Omarchy shell rescan command.
 
@@ -18,6 +18,18 @@ The Python package also pins the public Limitless Library core to commit
 3cc4839f87202422541a6aaa57a97d635f87f409. Update it only after running this
 adapter's full test, package, and distribution checks against the candidate
 core revision.
+
+## UI-owned runtime
+
+The panel's explicit setup action requires the normal Omarchy desktop
+environment to expose an absolute `XDG_DATA_HOME` and Python 3 with virtual
+environment support. It installs the reviewed adapter and pinned core only
+into `XDG_DATA_HOME/limitless-omarchy/runtime`; no system-Python installation,
+privileged action, or agent-side MCP configuration is supported or required.
+
+The first setup may use network access to resolve the pinned public core and
+its Python dependencies. Queries after setup use the owner-selected local
+catalog; they do not require network access or a managed Limitless service.
 
 ## Compatibility matching
 

@@ -20,10 +20,13 @@ def test_manifest_is_a_valid_third_party_panel_contract() -> None:
     assert manifest["schemaVersion"] == 1
     assert manifest["id"] == "univeracity.limitless-library"
     assert not manifest["id"].startswith("omarchy.")
-    assert manifest["kinds"] == ["panel"]
+    assert manifest["kinds"] == ["panel", "bar-widget"]
     entry_point = ROOT / manifest["entryPoints"]["panel"]
     assert entry_point.is_file()
     assert not entry_point.is_symlink()
+    widget = ROOT / manifest["entryPoints"]["barWidget"]
+    assert widget.is_file()
+    assert manifest["barWidget"]["defaultSection"] == "right"
 
 
 def test_package_pins_a_public_limitless_library_revision() -> None:
@@ -41,18 +44,62 @@ def test_cli_keeps_local_queries_bounded_to_omarchy_private_reuse() -> None:
     assert 'choices=["private"]' in cli
 
 
-def test_panel_exposes_host_lifecycle_and_uses_local_companion() -> None:
+def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> None:
     panel = (ROOT / "plugin" / "Panel.qml").read_text(encoding="utf-8")
 
     assert "function open(payloadJson)" in panel
     assert "function close()" in panel
-    assert '["limitless-omarchy", "status"]' in panel
-    assert '["limitless-omarchy", "query", "--catalog", catalogPath]' in panel
+    assert '"/scripts/limitless-omarchy-runtime"' in panel
+    assert "function installRuntime()" in panel
+    assert "function queryCatalog()" in panel
+    assert "function queryExample()" in panel
+    assert "TextInput" in panel
     assert "WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive" in panel
     assert "selectionReference" in panel
     assert "method.summary" in panel
     assert "service-not-configured" not in panel
     assert "omarchy plugin enable" not in panel
+
+
+def test_bar_widget_opens_the_panel_through_omarchy() -> None:
+    widget = (ROOT / "plugin" / "BarWidget.qml").read_text(encoding="utf-8")
+
+    assert 'moduleName: "univeracity.limitless-library"' in widget
+    assert "WidgetButton" in widget
+    assert "omarchy-shell shell toggle univeracity.limitless-library" in widget
+
+
+def test_panel_runtime_is_syntax_valid_and_never_targets_system_python() -> None:
+    runtime = ROOT / "scripts" / "limitless-omarchy-runtime"
+    text = runtime.read_text(encoding="utf-8")
+
+    subprocess.run(["bash", "-n", str(runtime)], check=True)
+    assert "XDG_DATA_HOME" in text
+    assert '"$runtime/bin/python" -m pip' in text
+    assert "pip install --user" not in text
+    assert "sudo" not in text
+    assert '"$python_command" -m venv "$runtime"' in text
+    assert 'mv -- "$stage/venv" "$runtime"' not in text
+
+
+def test_panel_runtime_reports_setup_required_without_writing_to_the_system_python(tmp_path: Path) -> None:
+    runtime = ROOT / "scripts" / "limitless-omarchy-runtime"
+    environment = {**os.environ, "XDG_DATA_HOME": str(tmp_path / "xdg-data")}
+
+    completed = subprocess.run(
+        [str(runtime), "status", "--plugin-root", str(ROOT)],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=environment,
+    )
+
+    assert json.loads(completed.stdout) == {
+        "schemaVersion": "limitless.omarchy-status/0.1",
+        "mode": "setup-required",
+        "service": {"connected": False, "reason": "local-runtime-not-installed"},
+    }
+    assert not (tmp_path / "xdg-data").exists()
 
 
 def test_runtime_smoke_harness_is_syntax_valid_and_non_mutating() -> None:

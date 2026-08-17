@@ -15,6 +15,8 @@ REQUIRED = {
     "MANIFEST.in",
     "manifest.json",
     "plugin/Panel.qml",
+    "plugin/BarWidget.qml",
+    "scripts/limitless-omarchy-runtime",
     "scripts/smoke-omarchy-panel",
     "scripts/verify-distribution.py",
     "docs/ARCHITECTURE.md",
@@ -23,6 +25,7 @@ REQUIRED = {
     "examples/catalog/reading-focus-method/capsule.json",
     "src/limitless_omarchy/adapter.py",
     "src/limitless_omarchy/mcp_server.py",
+    "src/limitless_omarchy/provider.py",
 }
 
 

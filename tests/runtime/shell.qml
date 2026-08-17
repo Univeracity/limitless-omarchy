@@ -8,6 +8,7 @@ ShellRoot {
   id: root
 
   property string panelPath: Quickshell.env("LIMITLESS_PANEL_PATH")
+  property string pluginRoot: Quickshell.env("LIMITLESS_PLUGIN_ROOT")
   property string resultPath: Quickshell.env("LIMITLESS_PANEL_RESULT")
   property string payloadJson: Quickshell.env("LIMITLESS_PANEL_PAYLOAD") || "{}"
   property string failure: ""
@@ -17,7 +18,10 @@ ShellRoot {
       if (panel.item) panel.item.close()
     }
   }
-  property var manifestBridge: ({ id: "univeracity.limitless-library" })
+  property var manifestBridge: ({
+    id: "univeracity.limitless-library",
+    __sourceDir: root.pluginRoot
+  })
 
   FileView {
     id: resultFile
@@ -63,6 +67,7 @@ ShellRoot {
       failure: failure,
       loaderStatus: panel.status,
       opened: panel.item ? panel.item.opened : false,
+      runtimeReady: panel.item ? panel.item.runtimeReady : false,
       disposition: panel.item ? panel.item.disposition : "",
       headline: panel.item ? panel.item.headline : "",
       detail: panel.item ? panel.item.detail : "",
