@@ -15,6 +15,7 @@ REQUIRED = {
     "MANIFEST.in",
     "manifest.json",
     "plugin/Panel.qml",
+    "plugin/PanelContents.qml",
     "plugin/BarWidget.qml",
     "scripts/limitless-omarchy-runtime",
     "scripts/smoke-omarchy-panel",

@@ -4,6 +4,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
+import "." as Local
 
 // Standalone Quattro panel. It owns local setup and local use; the bundled
 // runtime creates an isolated CLI only after the owner explicitly asks it to.
@@ -141,8 +142,8 @@ Item {
 
   PanelWindow {
     visible: root.opened
-    implicitWidth: 480
-    implicitHeight: content.implicitHeight + 40
+    implicitWidth: content.implicitWidth
+    implicitHeight: content.implicitHeight
     anchors { top: true; right: true }
     margins { top: 44; right: 20 }
     color: Color.popups.background
@@ -165,180 +166,10 @@ Item {
         radius: Style.cornerRadius
       }
 
-      Column {
+      Local.PanelContents {
         id: content
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 12
-
-        Text {
-          text: "LIMITLESS LIBRARY"
-          color: Color.accent
-          font.family: Style.font.family
-          font.pixelSize: Style.font.caption
-          font.bold: true
-        }
-
-        Text {
-          text: root.headline
-          color: Color.popups.text
-          font.family: Style.font.family
-          font.pixelSize: Style.font.heading
-          font.bold: true
-        }
-
-        Text {
-          width: 440
-          wrapMode: Text.Wrap
-          text: root.detail
-          color: Color.popups.text
-          opacity: 0.8
-          font.family: Style.font.family
-          font.pixelSize: Style.font.body
-        }
-
-        Text {
-          visible: root.selectionReference !== ""
-          width: 440
-          elide: Text.ElideRight
-          text: root.selectionReference
-          color: Color.accent
-          opacity: 0.8
-          font.family: Style.font.family
-          font.pixelSize: Style.font.bodySmall
-        }
-
-        Text {
-          visible: root.catalogPath !== ""
-          width: 440
-          wrapMode: Text.WrapAnywhere
-          text: "Catalog: " + root.catalogPath
-          color: Color.popups.text
-          opacity: 0.55
-          font.family: Style.font.family
-          font.pixelSize: Style.font.caption
-        }
-
-        Text {
-          visible: root.errorText !== ""
-          width: 440
-          wrapMode: Text.Wrap
-          text: root.errorText
-          color: Color.urgent
-          font.family: Style.font.family
-          font.pixelSize: Style.font.bodySmall
-        }
-
-        Text {
-          visible: root.commandRunning
-          width: 440
-          wrapMode: Text.Wrap
-          text: root.operation === "setup"
-            ? "Preparing the isolated local runtime…"
-            : "Checking local reuse…"
-          color: Color.accent
-          font.family: Style.font.family
-          font.pixelSize: Style.font.bodySmall
-        }
-
-        Rectangle {
-          width: 440
-          height: 1
-          color: Color.popups.border
-          opacity: 0.65
-        }
-
-        Text {
-          width: 440
-          text: root.runtimeReady ? "Local catalog" : "No global installation"
-          color: Color.popups.text
-          font.family: Style.font.family
-          font.pixelSize: Style.font.bodySmall
-          font.bold: true
-        }
-
-        Rectangle {
-          visible: root.runtimeReady
-          width: 440
-          height: Math.max(34, Style.spacing.controlHeight)
-          radius: Style.cornerRadius
-          color: Color.popups.background
-          border.color: catalogInput.activeFocus ? Color.accent : Color.popups.border
-          border.width: 1
-
-          TextInput {
-            id: catalogInput
-            anchors.fill: parent
-            anchors.leftMargin: 10
-            anchors.rightMargin: 10
-            verticalAlignment: TextInput.AlignVCenter
-            clip: true
-            text: root.catalogPath
-            color: Color.popups.text
-            font.family: Style.font.family
-            font.pixelSize: Style.font.bodySmall
-            selectByMouse: true
-            onTextEdited: root.catalogPath = text
-
-            Text {
-              anchors.fill: parent
-              verticalAlignment: Text.AlignVCenter
-              visible: catalogInput.text === ""
-              text: "/absolute/path/to/local-catalog"
-              color: Color.popups.text
-              opacity: 0.45
-              font: catalogInput.font
-            }
-          }
-        }
-
-        Row {
-          width: 440
-          spacing: 8
-
-          Button {
-            width: 216
-            height: Math.max(34, Style.spacing.controlHeight)
-            text: root.runtimeReady ? "Update local runtime" : "Install local runtime"
-            bordered: true
-            focusable: true
-            enabled: !root.commandRunning
-            onClicked: root.installRuntime()
-          }
-
-          Button {
-            width: 216
-            height: Math.max(34, Style.spacing.controlHeight)
-            text: "Try included example"
-            bordered: true
-            focusable: true
-            enabled: root.runtimeReady && !root.commandRunning
-            onClicked: root.queryExample()
-          }
-        }
-
-        Button {
-          visible: root.runtimeReady
-          width: 440
-          height: Math.max(34, Style.spacing.controlHeight)
-          text: "Query local catalog"
-          bordered: true
-          focusable: true
-          enabled: !root.commandRunning
-          onClicked: root.queryCatalog()
-        }
-
-        Text {
-          width: 440
-          wrapMode: Text.Wrap
-          text: root.runtimeReady
-            ? "Local decisions stay on this machine. Review and enable desktop changes explicitly."
-            : "Setup creates a per-user runtime under XDG data. It never installs globally or publishes work."
-          color: Color.popups.text
-          opacity: 0.65
-          font.family: Style.font.family
-          font.pixelSize: Style.font.bodySmall
-        }
+        panel: root
       }
 
       MouseArea {

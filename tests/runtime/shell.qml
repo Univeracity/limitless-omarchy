@@ -11,6 +11,8 @@ ShellRoot {
   property string pluginRoot: Quickshell.env("LIMITLESS_PLUGIN_ROOT")
   property string resultPath: Quickshell.env("LIMITLESS_PANEL_RESULT")
   property string payloadJson: Quickshell.env("LIMITLESS_PANEL_PAYLOAD") || "{}"
+  property bool visualHold: Quickshell.env("LIMITLESS_PANEL_VISUAL_HOLD") === "1"
+  property string visualAction: Quickshell.env("LIMITLESS_PANEL_VISUAL_ACTION")
   property string failure: ""
 
   property var shellBridge: QtObject {
@@ -39,9 +41,18 @@ ShellRoot {
 
   Timer {
     id: inspectTimer
-    interval: 1200
+    interval: root.visualHold ? 3500 : 1200
     repeat: false
     onTriggered: root.finish()
+  }
+
+  Timer {
+    id: actionTimer
+    interval: 1500
+    repeat: false
+    onTriggered: {
+      if (root.visualAction === "example" && panel.item) panel.item.queryExample()
+    }
   }
 
   Loader {
@@ -57,6 +68,7 @@ ShellRoot {
       item.shell = root.shellBridge
       item.manifest = root.manifestBridge
       item.open(root.payloadJson)
+      if (root.visualHold && root.visualAction !== "") actionTimer.start()
       inspectTimer.start()
     }
   }
@@ -73,6 +85,10 @@ ShellRoot {
       detail: panel.item ? panel.item.detail : "",
       selectionReference: panel.item ? panel.item.selectionReference : "",
       errorText: panel.item ? panel.item.errorText : ""
+    }
+    if (visualHold) {
+      resultFile.setText(JSON.stringify(snapshot))
+      return
     }
     if (panel.item) {
       panel.item.close()

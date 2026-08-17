@@ -46,6 +46,7 @@ def test_cli_keeps_local_queries_bounded_to_omarchy_private_reuse() -> None:
 
 def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> None:
     panel = (ROOT / "plugin" / "Panel.qml").read_text(encoding="utf-8")
+    contents = (ROOT / "plugin" / "PanelContents.qml").read_text(encoding="utf-8")
 
     assert "function open(payloadJson)" in panel
     assert "function close()" in panel
@@ -53,7 +54,9 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "function installRuntime()" in panel
     assert "function queryCatalog()" in panel
     assert "function queryExample()" in panel
-    assert "TextInput" in panel
+    assert "PanelContents" in panel
+    assert "TextInput" in contents
+    assert "Try included example" in contents
     assert "WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive" in panel
     assert "selectionReference" in panel
     assert "method.summary" in panel
