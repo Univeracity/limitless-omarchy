@@ -10,6 +10,7 @@ from typing import Any
 
 from .adapter import AdapterError, query_local_catalog, seal_local_capsule, status, validate_plugin
 from .mcp_server import serve
+from .provider import serve_general_provider
 
 
 def _print(value: dict[str, Any]) -> None:
@@ -41,6 +42,12 @@ def _parser() -> argparse.ArgumentParser:
     mcp = subparsers.add_parser("mcp", help="serve the local Omarchy-aware MCP tool over stdio")
     mcp.add_argument("--catalog", type=Path, required=True)
     mcp.add_argument("--omarchy-release", help="explicit receiver release for compatibility matching")
+
+    provider = subparsers.add_parser(
+        "provider",
+        help="explicitly serve the generic local Limitless MCP tool over stdio",
+    )
+    provider.add_argument("--catalog", type=Path, required=True)
     return parser
 
 
@@ -68,6 +75,8 @@ def main() -> None:
                 raise SystemExit(1)
         elif args.command == "mcp":
             serve(args.catalog, omarchy_release=args.omarchy_release)
+        elif args.command == "provider":
+            serve_general_provider(args.catalog)
     except AdapterError as error:
         print(f"limitless-omarchy: {error}", file=sys.stderr)
         raise SystemExit(2) from error

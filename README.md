@@ -74,9 +74,10 @@ The query returns a structured local-only result. An unavailable catalog,
 missing core library, ambiguous candidate, or compatibility mismatch produces
 an abstention rather than a best-effort selection.
 
-The companion is intentionally bounded to the `omarchy-customization` task
-kind, private scope, and `adopt` or `instantiate` use. It is not a general
-task-search client or a path for publishing a desktop request.
+The Omarchy-specific query surface is intentionally bounded to the
+`omarchy-customization` task kind, private scope, and `adopt` or `instantiate`
+use. It is not a general task-search client or a path for publishing a desktop
+request.
 
 ## Preserve newly completed work locally
 
@@ -107,6 +108,26 @@ other optional input is an explicitly known Omarchy release.
 Use this as the agent's first material-customization step. It returns a
 component, a source-free method, or an abstention; it never transports
 artifact bytes or silently enables a desktop change.
+
+## Optionally serve general Limitless reuse
+
+The Omarchy tool above stays deliberately narrow. If the owner wants this one
+installation to also be their **general local Limitless provider**, configure
+the explicitly separate `provider` command:
+
+    limitless-omarchy provider --catalog /absolute/path/to/general-catalog
+
+It exposes the standard read-only `limitless_query_before_work` MCP tool from
+Limitless Library. That tool accepts the generic Library query contract and
+can serve ordinary agent reuse from the catalog the owner selected. It does
+not derive or disclose an Omarchy profile, read desktop configuration, connect
+to a service, or merge catalogs automatically.
+
+The distinction is intentional: `limitless-omarchy mcp` remains the private,
+Omarchy-aware first step for desktop customization, while `provider` is an
+owner's explicit choice to expose general local reuse through the same
+installed package. Either can be configured with an MCP client; run only the
+one or ones the owner intends to offer.
 
 ## Install the Quattro panel
 
@@ -140,7 +161,7 @@ For a real-session validation path, use the non-mutating
 | Repository | Responsibility |
 | --- | --- |
 | Limitless Library | Generic local reuse core, capsule contracts, MCP and CLI surfaces, receipts, and conformance |
-| This repository | Omarchy profile, Quattro panel, native validation integration, examples, and tests |
+| This repository | Omarchy profile, Quattro panel, native validation integration, explicit generic-provider handoff, examples, and tests |
 | Private Limitless service | Identity, policy, scopes, private catalog coordination, revocation, and managed verification |
 
 ## Status

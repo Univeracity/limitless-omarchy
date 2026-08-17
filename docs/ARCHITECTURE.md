@@ -53,6 +53,20 @@ layer. The MCP input does not admit arbitrary task text or configuration;
 agents may provide only an explicitly known Omarchy release. Task kind and
 tenant scope are fixed to Omarchy customization and private reuse.
 
+## Optional general provider
+
+`limitless-omarchy provider --catalog …` is a separate, explicit local MCP
+entry point for an owner who wants this installation to provide general
+Limitless reuse as well. It replaces itself with Limitless Library's generic
+stdio server, so the generic tool, framing, schemas, and policy remain owned
+by the core rather than copied into this adapter.
+
+This entry point does not call the Omarchy profile adapter, inspect desktop
+state, or combine catalogs. It exists to eliminate duplicate package and MCP
+configuration for an owner who has deliberately chosen a general local
+catalog. The default `mcp` entry point remains bounded to private
+Omarchy-customization requests.
+
 ## Service boundary
 
 The private Limitless service may later coordinate owner-authorized private

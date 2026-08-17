@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+import limitless_library
 import pytest
 from limitless_library.catalog import seal_capsule
+from limitless_library.contracts import load_json
 from limitless_library.mcp_protocol import modern_metadata
+from limitless_library.mcp_server import TOOL_NAME as GENERAL_TOOL_NAME
 
 from limitless_omarchy.adapter import (
     AdapterError,
@@ -19,6 +24,12 @@ from limitless_omarchy.adapter import (
     validate_plugin,
 )
 from limitless_omarchy.mcp_server import TOOL_NAME, handle_message
+from limitless_omarchy.provider import general_provider_command
+
+ROOT = Path(__file__).parents[1]
+GENERAL_ASSETS = Path(limitless_library.__file__).with_name("demo_assets")
+GENERAL_CATALOG = GENERAL_ASSETS / "catalog"
+GENERAL_REQUEST = GENERAL_ASSETS / "requests" / "exact-python.json"
 
 
 def completed(returncode: int = 0, stdout: str = "", stderr: str = "") -> subprocess.CompletedProcess[str]:
@@ -237,3 +248,58 @@ def test_mcp_supports_modern_stateless_tool_calls(tmp_path: Path) -> None:
     assert response is not None
     assert response["result"]["resultType"] == "complete"
     assert response["result"]["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "limitless-omarchy"
+
+
+def test_general_provider_reuses_the_core_server_with_the_current_interpreter(tmp_path: Path) -> None:
+    catalog = tmp_path / "general-catalog"
+
+    assert general_provider_command(catalog) == [
+        sys.executable,
+        "-m",
+        "limitless_library.mcp_server",
+        "--catalog",
+        str(catalog),
+    ]
+
+
+def test_general_provider_is_explicit_and_exposes_only_the_generic_tool() -> None:
+    request = load_json(GENERAL_REQUEST)
+    messages = [
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list",
+            "params": {"_meta": modern_metadata(client_name="test", client_version="1")},
+        },
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": GENERAL_TOOL_NAME,
+                "arguments": request,
+                "_meta": modern_metadata(client_name="test", client_version="1"),
+            },
+        },
+    ]
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = os.pathsep.join([str(ROOT / "src"), str(Path(limitless_library.__file__).parents[1])])
+    completed_process = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "limitless_omarchy.cli",
+            "provider",
+            "--catalog",
+            str(GENERAL_CATALOG),
+        ],
+        input="".join(json.dumps(message) + "\n" for message in messages),
+        capture_output=True,
+        check=True,
+        encoding="utf-8",
+        env=environment,
+    )
+    responses = [json.loads(line) for line in completed_process.stdout.splitlines()]
+
+    assert [tool["name"] for tool in responses[0]["result"]["tools"]] == [GENERAL_TOOL_NAME]
+    assert responses[1]["result"]["structuredContent"]["decision"] == "reuse"
