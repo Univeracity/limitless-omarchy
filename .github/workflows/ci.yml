@@ -83,9 +83,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Fetch the pinned Quattro plugin validator
         run: |
-          git init omarchy-contract
-          git -C omarchy-contract remote add origin https://github.com/basecamp/omarchy.git
-          git -C omarchy-contract fetch --depth=1 origin 30f7a06090dc20dd1a4a8d0c99bfb8e2370df2ec
-          git -C omarchy-contract checkout --detach FETCH_HEAD
+          git init "$RUNNER_TEMP/omarchy-contract"
+          git -C "$RUNNER_TEMP/omarchy-contract" remote add origin https://github.com/basecamp/omarchy.git
+          git -C "$RUNNER_TEMP/omarchy-contract" fetch --depth=1 origin 30f7a06090dc20dd1a4a8d0c99bfb8e2370df2ec
+          git -C "$RUNNER_TEMP/omarchy-contract" checkout --detach FETCH_HEAD
       - name: Validate the distributable plugin
-        run: omarchy-contract/bin/omarchy-plugin-validate .
+        run: |
+          "$RUNNER_TEMP/omarchy-contract/bin/omarchy-plugin-validate" .
