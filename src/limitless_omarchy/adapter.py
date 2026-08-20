@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-import subprocess
+import subprocess  # nosec B404
 import sys
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
@@ -24,7 +24,10 @@ _TENANT_SCOPE = "private"
 
 
 def _default_runner(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(list(argv), capture_output=True, check=False, text=True, timeout=3)
+    # The argument vector is passed directly; shell expansion is never enabled.
+    return subprocess.run(  # nosec B603
+        list(argv), capture_output=True, check=False, text=True, timeout=3
+    )
 
 
 def _shell_available(runner: Runner) -> bool:

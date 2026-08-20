@@ -13,6 +13,7 @@ REQUIRED = {
     "README.md",
     "SECURITY.md",
     "MANIFEST.in",
+    ".github/scripts/changed_test_scope.py",
     "manifest.json",
     "plugin/Panel.qml",
     "plugin/PanelContents.qml",
@@ -24,9 +25,13 @@ REQUIRED = {
     "docs/COMPATIBILITY.md",
     "docs/RUNTIME-SMOKE.md",
     "examples/catalog/reading-focus-method/capsule.json",
+    "src/limitless_omarchy/__init__.py",
     "src/limitless_omarchy/adapter.py",
+    "src/limitless_omarchy/cli.py",
     "src/limitless_omarchy/mcp_server.py",
     "src/limitless_omarchy/provider.py",
+    "src/limitless_omarchy/service.py",
+    "tests/runtime/visual.qml",
 }
 
 

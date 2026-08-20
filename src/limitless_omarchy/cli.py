@@ -8,13 +8,43 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from limitless_library.contracts import strict_json_loads
+
 from .adapter import AdapterError, query_local_catalog, seal_local_capsule, status, validate_plugin
 from .mcp_server import serve
 from .provider import serve_general_provider
+from .service import inspect_managed_service, query_managed_service
+
+MAX_SERVICE_INPUT_BYTES = 8 * 1024
 
 
 def _print(value: dict[str, Any]) -> None:
     print(json.dumps(value, indent=2, sort_keys=True))
+
+
+def _service_query_input() -> tuple[str, str | None]:
+    raw = sys.stdin.buffer.readline(MAX_SERVICE_INPUT_BYTES + 1)
+    if not raw or len(raw) > MAX_SERVICE_INPUT_BYTES or not raw.endswith(b"\n"):
+        raise AdapterError("service query input must be one bounded JSON line on stdin")
+    try:
+        value = strict_json_loads(raw.decode("utf-8"))
+    except (UnicodeError, ValueError) as error:
+        raise AdapterError("service query input is invalid") from error
+    if not isinstance(value, dict) or set(value) != {
+        "schemaVersion",
+        "objective",
+        "accessToken",
+    }:
+        raise AdapterError("service query input has an unsupported shape")
+    if value["schemaVersion"] != "limitless.omarchy-service-query-input/0.1":
+        raise AdapterError("service query input schemaVersion is invalid")
+    objective = value["objective"]
+    token = value["accessToken"]
+    if not isinstance(objective, str) or not objective or len(objective) > 480:
+        raise AdapterError("service query objective is invalid")
+    if token is not None and (not isinstance(token, str) or len(token) > 4096):
+        raise AdapterError("service access token is invalid")
+    return objective, token
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -48,6 +78,20 @@ def _parser() -> argparse.ArgumentParser:
         help="explicitly serve the generic local Limitless MCP tool over stdio",
     )
     provider.add_argument("--catalog", type=Path, required=True)
+
+    service_inspect = subparsers.add_parser(
+        "service-inspect",
+        help="verify an explicitly selected managed-service profile without sending a task",
+    )
+    service_inspect.add_argument("--profile", type=Path, required=True)
+
+    service_query = subparsers.add_parser(
+        "service-query",
+        help="send one explicit Omarchy request read from bounded stdin",
+    )
+    service_query.add_argument("--profile", type=Path, required=True)
+    service_query.add_argument("--omarchy-release")
+    service_query.add_argument("--request-id")
     return parser
 
 
@@ -77,6 +121,19 @@ def main() -> None:
             serve(args.catalog, omarchy_release=args.omarchy_release)
         elif args.command == "provider":
             serve_general_provider(args.catalog)
+        elif args.command == "service-inspect":
+            _print(inspect_managed_service(args.profile))
+        elif args.command == "service-query":
+            objective, access_token = _service_query_input()
+            _print(
+                query_managed_service(
+                    args.profile,
+                    objective=objective,
+                    access_token=access_token,
+                    omarchy_release=args.omarchy_release,
+                    request_id=args.request_id,
+                )
+            )
     except AdapterError as error:
         print(f"limitless-omarchy: {error}", file=sys.stderr)
         raise SystemExit(2) from error

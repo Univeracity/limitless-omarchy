@@ -20,13 +20,15 @@ fail() {
 
 usage() {
   cat <<'USAGE'
-Usage: limitless-omarchy-runtime ACTION --plugin-root PATH [--catalog PATH]
+Usage: limitless-omarchy-runtime ACTION --plugin-root PATH [--catalog PATH] [--profile PATH] [--omarchy-release VALUE]
 
 Actions:
   status      report whether the panel-owned local runtime is available
   setup       explicitly create or update the isolated local runtime
   query       query a selected local catalog before an Omarchy customization
   query-demo  query the checked-in local example catalog
+  service-inspect  verify an explicitly selected managed-service profile
+  service-query    read one managed query as a bounded JSON line from stdin
 
 The panel invokes this script itself. It is also intentionally usable as a
 lower-level diagnostic surface; it never installs into the system Python.
@@ -39,6 +41,8 @@ shift
 
 plugin_root=""
 catalog=""
+profile=""
+omarchy_release=""
 while (($#)); do
   case "$1" in
     --plugin-root)
@@ -49,6 +53,16 @@ while (($#)); do
     --catalog)
       (($# >= 2)) || fail "--catalog requires a directory"
       catalog=$2
+      shift 2
+      ;;
+    --profile)
+      (($# >= 2)) || fail "--profile requires a file"
+      profile=$2
+      shift 2
+      ;;
+    --omarchy-release)
+      (($# >= 2)) || fail "--omarchy-release requires a value"
+      omarchy_release=$2
       shift 2
       ;;
     --help|-h)
@@ -62,7 +76,7 @@ while (($#)); do
 done
 
 case "$action" in
-  status|setup|query|query-demo) ;;
+  status|setup|query|query-demo|service-inspect|service-query) ;;
   *)
     fail "unrecognized action: $action"
     ;;
@@ -133,5 +147,17 @@ case "$action" in
   query-demo)
     runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
     exec "$runtime_cli" query --catalog "$plugin_root/examples/catalog"
+    ;;
+  service-inspect)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    [[ -n $profile && $profile == /* && -f $profile ]] || fail "an absolute readable service profile is required"
+    exec "$runtime_cli" service-inspect --profile "$profile"
+    ;;
+  service-query)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    [[ -n $profile && $profile == /* && -f $profile ]] || fail "an absolute readable service profile is required"
+    service_arguments=(service-query --profile "$profile")
+    [[ -z $omarchy_release ]] || service_arguments+=(--omarchy-release "$omarchy_release")
+    exec "$runtime_cli" "${service_arguments[@]}"
     ;;
 esac

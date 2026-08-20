@@ -10,13 +10,21 @@ from .adapter import (
     validate_plugin,
 )
 from .mcp_server import handle_message
+from .service import (
+    build_service_receiver_context,
+    inspect_managed_service,
+    query_managed_service,
+)
 
 __all__ = [
     "AdapterError",
     "build_query",
+    "build_service_receiver_context",
     "discover_profile",
     "handle_message",
+    "inspect_managed_service",
     "query_local_catalog",
+    "query_managed_service",
     "seal_local_capsule",
     "status",
     "validate_plugin",

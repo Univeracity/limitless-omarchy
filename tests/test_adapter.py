@@ -5,7 +5,9 @@ import os
 import subprocess
 import sys
 from datetime import UTC, datetime
+from io import BytesIO
 from pathlib import Path
+from types import SimpleNamespace
 
 import limitless_library
 import pytest
@@ -13,6 +15,7 @@ from limitless_library.catalog import seal_capsule
 from limitless_library.contracts import load_json
 from limitless_library.mcp_protocol import modern_metadata
 from limitless_library.mcp_server import TOOL_NAME as GENERAL_TOOL_NAME
+from limitless_library.service_connector import ServiceConnectorError, ServiceUnavailableError
 
 from limitless_omarchy.adapter import (
     AdapterError,
@@ -23,8 +26,14 @@ from limitless_omarchy.adapter import (
     status,
     validate_plugin,
 )
+from limitless_omarchy.cli import _service_query_input
 from limitless_omarchy.mcp_server import TOOL_NAME, handle_message
 from limitless_omarchy.provider import general_provider_command
+from limitless_omarchy.service import (
+    build_service_receiver_context,
+    inspect_managed_service,
+    query_managed_service,
+)
 
 ROOT = Path(__file__).parents[1]
 GENERAL_ASSETS = Path(limitless_library.__file__).with_name("demo_assets")
@@ -52,6 +61,75 @@ def sealed_catalog(tmp_path: Path) -> Path:
     target.mkdir(parents=True)
     (target / "capsule.json").write_text(json.dumps(capsule), encoding="utf-8")
     return target.parent
+
+
+def service_profile(tmp_path: Path) -> Path:
+    path = tmp_path / "service-profile.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schemaVersion": "limitless.service-profile/1.0",
+                "apiBaseUrl": "https://api.example.com",
+                "serviceId": "service:example",
+                "rootKey": {
+                    "keyId": "root:example",
+                    "algorithm": "ed25519",
+                    "publicKey": "A" * 43,
+                },
+                "acceptedPolicyDigest": "sha256:" + "1" * 64,
+                "dataUseMode": "standard",
+                "requestedScopes": ["public"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+class FakeServiceConnector:
+    def __init__(self, profile: object) -> None:
+        self.profile = profile
+        self.last_query: dict[str, object] | None = None
+
+    def inspect(self) -> object:
+        return SimpleNamespace(
+            discovery={
+                "dataUsePolicy": {
+                    "url": "https://example.com/policy",
+                    "digest": "sha256:" + "1" * 64,
+                },
+                "resultVersions": ["limitless.service-query-result/1.1"],
+                "expiresAt": "2026-08-21T00:00:00Z",
+            }
+        )
+
+    def build_query(self, **values: object) -> dict[str, object]:
+        return {
+            **values,
+            "queryDigest": "sha256:" + "2" * 64,
+        }
+
+    def query(self, query: dict[str, object]) -> dict[str, object]:
+        self.last_query = query
+        return {
+            "treatment": "source-free-method",
+            "selection": {
+                "title": "Reviewed focus method",
+                "summary": "Reduce visual noise while preserving navigation.",
+                "method": {"summary": "Apply the reviewed focus sequence."},
+            },
+        }
+
+
+class UnavailableServiceConnector(FakeServiceConnector):
+    def query(self, query: dict[str, object]) -> dict[str, object]:
+        self.last_query = query
+        raise ServiceUnavailableError("unavailable")
+
+
+class InvalidAuthorityConnector(FakeServiceConnector):
+    def inspect(self) -> object:
+        raise ServiceConnectorError("invalid authority")
 
 
 def test_profile_is_minimal_and_marks_shell_availability() -> None:
@@ -97,6 +175,89 @@ def test_status_is_explicitly_local_only() -> None:
 
     assert result["mode"] == "local-only"
     assert result["service"] == {"connected": False, "reason": "service-not-configured"}
+
+
+def test_service_receiver_context_is_minimal_and_target_aware() -> None:
+    context = build_service_receiver_context(discover_profile(omarchy_release="4.2", runner=shell_available))
+
+    assert context["receiverId"] == "receiver:omarchy-desktop"
+    assert context["interfaces"] == ["omarchy.plugin/v1"]
+    assert context["targets"][0]["runtime"] == "omarchy"
+    assert context["targets"][0]["versionRange"] == "==4.2"
+    assert "plugins" not in json.dumps(context).lower()
+
+
+def test_service_inspection_verifies_profile_without_a_query(tmp_path: Path) -> None:
+    result = inspect_managed_service(
+        service_profile(tmp_path),
+        connector_factory=FakeServiceConnector,
+    )
+
+    assert result["mode"] == "managed-service-ready"
+    assert result["service"]["serviceId"] == "service:example"
+    assert result["policy"]["digest"] == "sha256:" + "1" * 64
+
+
+def test_managed_query_returns_verified_shape_without_echoing_sensitive_input(tmp_path: Path) -> None:
+    result = query_managed_service(
+        service_profile(tmp_path),
+        objective="Find a reviewed focus customization.",
+        access_token="test-access-token-value",
+        omarchy_release="4.2",
+        request_id="request:omarchy-test",
+        runner=shell_available,
+        connector_factory=FakeServiceConnector,
+    )
+
+    encoded = json.dumps(result)
+    assert result["mode"] == "managed-service"
+    assert result["disposition"] == "source-free-method"
+    assert result["decision"]["selection"]["title"] == "Reviewed focus method"
+    assert "Find a reviewed" not in encoded
+    assert "test-access-token-value" not in encoded
+    assert result["service"]["authenticated"] is True
+
+
+def test_managed_unavailability_abstains_without_disabling_local_reuse(tmp_path: Path) -> None:
+    result = query_managed_service(
+        service_profile(tmp_path),
+        objective="Find a reviewed focus customization.",
+        request_id="request:omarchy-test",
+        runner=shell_available,
+        connector_factory=UnavailableServiceConnector,
+    )
+
+    assert result["disposition"] == "abstain"
+    assert result["reason"] == "service-unavailable-local-still-available"
+    assert result["decision"] is None
+
+
+def test_service_authority_failure_is_not_reclassified_as_an_abstention(tmp_path: Path) -> None:
+    with pytest.raises(AdapterError, match="authority verification failed"):
+        inspect_managed_service(
+            service_profile(tmp_path),
+            connector_factory=InvalidAuthorityConnector,
+        )
+
+
+def test_service_cli_reads_objective_and_token_only_from_bounded_stdin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "schemaVersion": "limitless.omarchy-service-query-input/0.1",
+        "objective": "Find a reviewed focus customization.",
+        "accessToken": "test-access-token-value",
+    }
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        SimpleNamespace(buffer=BytesIO((json.dumps(payload) + "\n").encode("utf-8"))),
+    )
+
+    assert _service_query_input() == (
+        "Find a reviewed focus customization.",
+        "test-access-token-value",
+    )
 
 
 def test_query_returns_source_free_method_for_eligible_catalog(tmp_path: Path) -> None:

@@ -6,8 +6,8 @@ import qs.Commons
 import qs.Ui
 import "." as Local
 
-// Standalone Quattro panel. It owns local setup and local use; the bundled
-// runtime creates an isolated CLI only after the owner explicitly asks it to.
+// Standalone Quattro panel. It owns local setup and use. Managed discovery is
+// a separate explicit action and never changes the local-only default.
 Item {
   id: root
 
@@ -15,6 +15,13 @@ Item {
   property var manifest: null
   property bool opened: false
   property string catalogPath: ""
+  property string serviceProfilePath: ""
+  property string serviceObjective: ""
+  property string serviceAccessToken: ""
+  property string omarchyRelease: ""
+  property bool serviceExpanded: false
+  property bool serviceReady: false
+  property string serviceSummary: "No managed-service request has been made."
   property bool runtimeReady: false
   property string headline: "Set up Limitless Library"
   property string detail: "Create an isolated local runtime to begin. Nothing will be shared."
@@ -24,6 +31,7 @@ Item {
   property string commandOutput: ""
   property string commandError: ""
   property string operation: ""
+  property string pendingInput: ""
   readonly property string pluginRoot: manifest && manifest.__sourceDir
     ? String(manifest.__sourceDir) : ""
   readonly property bool commandRunning: command.running
@@ -32,6 +40,13 @@ Item {
     var payload = {}
     try { payload = JSON.parse(payloadJson || "{}") || {} } catch (e) {}
     if (payload.catalogPath !== undefined) catalogPath = String(payload.catalogPath)
+    if (payload.serviceProfilePath !== undefined) {
+      serviceProfilePath = String(payload.serviceProfilePath)
+      serviceExpanded = serviceProfilePath !== ""
+    }
+    if (payload.omarchyRelease !== undefined) omarchyRelease = String(payload.omarchyRelease)
+    serviceReady = false
+    serviceSummary = "No managed-service request has been made."
     opened = true
     refresh()
     Qt.callLater(function() { if (opened) keyCatcher.forceActiveFocus() })
@@ -39,6 +54,9 @@ Item {
 
   function close() {
     opened = false
+    serviceAccessToken = ""
+    serviceObjective = ""
+    pendingInput = ""
     if (command.running) command.running = false
   }
 
@@ -68,13 +86,44 @@ Item {
     runRuntime("query-demo", [])
   }
 
-  function runRuntime(nextOperation, arguments) {
+  function inspectService() {
+    if (serviceProfilePath.trim() === "") {
+      errorText = "Choose an absolute managed-service profile before inspecting it."
+      return
+    }
+    runRuntime("service-inspect", ["--profile", serviceProfilePath.trim()])
+  }
+
+  function queryService() {
+    if (serviceProfilePath.trim() === "") {
+      errorText = "Choose an absolute managed-service profile before querying it."
+      return
+    }
+    if (serviceObjective.trim() === "") {
+      errorText = "Describe the customization to search for before sending a managed query."
+      return
+    }
+    var arguments = ["--profile", serviceProfilePath.trim()]
+    if (omarchyRelease.trim() !== "") arguments = arguments.concat(["--omarchy-release", omarchyRelease.trim()])
+    var input = JSON.stringify({
+      schemaVersion: "limitless.omarchy-service-query-input/0.1",
+      objective: serviceObjective.trim(),
+      accessToken: serviceAccessToken === "" ? null : serviceAccessToken
+    })
+    runRuntime("service-query", arguments, input)
+  }
+
+  function runRuntime(nextOperation, arguments, stdinPayload) {
     if (command.running) return
     errorText = ""
     commandOutput = ""
     commandError = ""
     operation = nextOperation
+    pendingInput = stdinPayload === undefined ? "" : String(stdinPayload)
     if (pluginRoot === "") {
+      pendingInput = ""
+      serviceAccessToken = ""
+      serviceObjective = ""
       errorText = "The Omarchy plugin root is unavailable. Reinstall this reviewed plugin before continuing."
       return
     }
@@ -94,9 +143,60 @@ Item {
       runtimeReady = String(value.mode || "") === "local-only"
       headline = runtimeReady ? "Local Library ready" : "Set up Limitless Library"
       detail = runtimeReady
-        ? "Choose a local catalog below, or inspect the included example. The service is not connected."
+        ? "Choose a local catalog below, inspect the included example, or explicitly open the managed-service section."
         : "Create an isolated local runtime to begin. Nothing will be shared."
       selectionReference = ""
+      return
+    }
+    if (value.schemaVersion === "limitless.omarchy-service-status/0.1") {
+      disposition = "status"
+      serviceReady = String(value.mode || "") === "managed-service-ready"
+      if (serviceReady) {
+        var service = value.service || {}
+        var policy = value.policy || {}
+        headline = "Managed service verified"
+        detail = "The pinned service authority and policy match this profile. No task query was sent."
+        serviceSummary = String(service.serviceId || "managed service") + " · "
+          + String(service.dataUseMode || "unknown mode") + " · "
+          + String(policy.digest || "policy unavailable")
+      } else {
+        headline = "Managed service unavailable"
+        detail = "Local Library use remains available. No remote selection was fabricated."
+        serviceSummary = "Service unavailable; local reuse remains available."
+      }
+      selectionReference = ""
+      return
+    }
+    if (value.schemaVersion === "limitless.omarchy-service-result/0.1") {
+      runtimeReady = true
+      disposition = String(value.disposition || "abstain")
+      var serviceDecision = value.decision || null
+      var serviceSelection = serviceDecision && serviceDecision.selection ? serviceDecision.selection : null
+      selectionReference = serviceSelection && serviceSelection.title
+        ? String(serviceSelection.title)
+        : String(value.requestDigest || "")
+      if (disposition === "exact-component") {
+        var immutable = serviceSelection && serviceSelection.immutable ? serviceSelection.immutable : {}
+        headline = "Verified component available"
+        detail = String(serviceSelection.summary || "A compatible exact component was selected.")
+          + " Review " + String(immutable.uri || "the pinned source")
+          + " and continue through Omarchy's native add flow."
+      } else if (disposition === "source-free-method") {
+        var serviceMethod = serviceSelection && serviceSelection.method ? serviceSelection.method : {}
+        headline = "Verified method available"
+        detail = String(serviceMethod.summary || serviceSelection.summary || "Apply the source-free method locally.")
+      } else {
+        headline = value.reason === "service-unavailable-local-still-available"
+          ? "Managed service unavailable"
+          : "Start fresh"
+        detail = value.reason === "service-unavailable-local-still-available"
+          ? "The managed query could not complete. Local Library use remains available."
+          : "No eligible managed result was selected. No candidate details were disclosed."
+      }
+      serviceReady = value.reason !== "service-unavailable-local-still-available"
+      serviceSummary = serviceReady
+        ? "Signed managed result verified against the selected profile."
+        : "Service unavailable; local reuse remains available."
       return
     }
     runtimeReady = true
@@ -124,6 +224,13 @@ Item {
 
   Process {
     id: command
+    stdinEnabled: true
+    onStarted: {
+      if (root.pendingInput !== "") command.write(root.pendingInput + "\n")
+      root.pendingInput = ""
+      root.serviceAccessToken = ""
+      if (root.operation === "service-query") root.serviceObjective = ""
+    }
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: root.commandOutput = String(text || "")
@@ -136,6 +243,8 @@ Item {
       if (!root.opened) return
       if (exitCode === 0) root.applyResult(root.commandOutput)
       else root.errorText = root.commandError !== "" ? root.commandError : "The local runtime is unavailable."
+      root.pendingInput = ""
+      root.serviceAccessToken = ""
       root.operation = ""
     }
   }

@@ -4,7 +4,7 @@ include README.md
 include SECURITY.md
 include manifest.json
 include pyproject.toml
-recursive-include .github *.yml
+recursive-include .github *.py *.yml
 recursive-include docs *.md
 recursive-include examples *.json *.md
 recursive-include plugin *.qml

@@ -29,5 +29,6 @@ def serve_general_provider(catalog: Path) -> NoReturn:
     """
 
     command = general_provider_command(catalog)
-    os.execv(command[0], command)
+    # The command fixes the current interpreter and module and never uses a shell.
+    os.execv(command[0], command)  # nosec B606
     raise AssertionError("os.execv unexpectedly returned")

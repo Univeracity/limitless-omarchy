@@ -12,15 +12,25 @@ Item {
   readonly property bool commandRunning: panel ? panel.commandRunning : false
 
   implicitWidth: 480
-  implicitHeight: content.implicitHeight + 40
+  implicitHeight: Math.min(content.implicitHeight + 40, 680)
 
-  Column {
-    id: content
+  Flickable {
     anchors.fill: parent
-    anchors.margins: 20
-    spacing: 12
+    clip: true
+    contentWidth: width
+    contentHeight: content.implicitHeight + 40
+    flickableDirection: Flickable.VerticalFlick
+    boundsBehavior: Flickable.StopAtBounds
+    interactive: contentHeight > height
 
-    Text {
+    Column {
+      id: content
+      x: 20
+      y: 20
+      width: 440
+      spacing: 12
+
+      Text {
       text: "LIMITLESS LIBRARY"
       color: Color.accent
       font.family: Style.font.family
@@ -187,6 +197,221 @@ Item {
       opacity: 0.65
       font.family: Style.font.family
       font.pixelSize: Style.font.bodySmall
+    }
+
+    Rectangle {
+      visible: root.panel && root.panel.runtimeReady
+      width: 440
+      height: 1
+      color: Color.popups.border
+      opacity: 0.65
+    }
+
+    Button {
+      visible: root.panel && root.panel.runtimeReady
+      width: 440
+      height: Math.max(34, Style.spacing.controlHeight)
+      text: root.panel && root.panel.serviceExpanded
+        ? "Hide managed service"
+        : "Use managed service (optional)"
+      bordered: true
+      focusable: true
+      enabled: !root.commandRunning
+      onClicked: if (root.panel) root.panel.serviceExpanded = !root.panel.serviceExpanded
+    }
+
+    Text {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+      width: 440
+      wrapMode: Text.Wrap
+      text: "A profile pins the service, trust root, policy, mode, and scopes. Inspect sends no task. Query sends only the objective and minimal receiver context you approve."
+      color: Color.popups.text
+      opacity: 0.7
+      font.family: Style.font.family
+      font.pixelSize: Style.font.bodySmall
+    }
+
+    Rectangle {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+      width: 440
+      height: Math.max(34, Style.spacing.controlHeight)
+      radius: Style.cornerRadius
+      color: Color.popups.background
+      border.color: serviceProfileInput.activeFocus ? Color.accent : Color.popups.border
+      border.width: 1
+
+      TextInput {
+        id: serviceProfileInput
+        anchors.fill: parent
+        anchors.leftMargin: 10
+        anchors.rightMargin: 10
+        verticalAlignment: TextInput.AlignVCenter
+        clip: true
+        text: root.panel ? root.panel.serviceProfilePath : ""
+        color: Color.popups.text
+        font.family: Style.font.family
+        font.pixelSize: Style.font.bodySmall
+        selectByMouse: true
+        onTextEdited: if (root.panel) root.panel.serviceProfilePath = text
+
+        Text {
+          anchors.fill: parent
+          verticalAlignment: Text.AlignVCenter
+          visible: serviceProfileInput.text === ""
+          text: "/absolute/path/to/service-profile.json"
+          color: Color.popups.text
+          opacity: 0.45
+          font: serviceProfileInput.font
+        }
+      }
+    }
+
+    Rectangle {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+      width: 440
+      height: Math.max(34, Style.spacing.controlHeight)
+      radius: Style.cornerRadius
+      color: Color.popups.background
+      border.color: serviceObjectiveInput.activeFocus ? Color.accent : Color.popups.border
+      border.width: 1
+
+      TextInput {
+        id: serviceObjectiveInput
+        anchors.fill: parent
+        anchors.leftMargin: 10
+        anchors.rightMargin: 10
+        verticalAlignment: TextInput.AlignVCenter
+        clip: true
+        text: root.panel ? root.panel.serviceObjective : ""
+        color: Color.popups.text
+        font.family: Style.font.family
+        font.pixelSize: Style.font.bodySmall
+        selectByMouse: true
+        onTextEdited: if (root.panel) root.panel.serviceObjective = text
+
+        Text {
+          anchors.fill: parent
+          verticalAlignment: Text.AlignVCenter
+          visible: serviceObjectiveInput.text === ""
+          text: "Customization to find"
+          color: Color.popups.text
+          opacity: 0.45
+          font: serviceObjectiveInput.font
+        }
+      }
+    }
+
+    Row {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+      width: 440
+      spacing: 8
+
+      Rectangle {
+        width: 216
+        height: Math.max(34, Style.spacing.controlHeight)
+        radius: Style.cornerRadius
+        color: Color.popups.background
+        border.color: omarchyReleaseInput.activeFocus ? Color.accent : Color.popups.border
+        border.width: 1
+
+        TextInput {
+          id: omarchyReleaseInput
+          anchors.fill: parent
+          anchors.leftMargin: 10
+          anchors.rightMargin: 10
+          verticalAlignment: TextInput.AlignVCenter
+          clip: true
+          text: root.panel ? root.panel.omarchyRelease : ""
+          color: Color.popups.text
+          font.family: Style.font.family
+          font.pixelSize: Style.font.bodySmall
+          selectByMouse: true
+          onTextEdited: if (root.panel) root.panel.omarchyRelease = text
+
+          Text {
+            anchors.fill: parent
+            verticalAlignment: Text.AlignVCenter
+            visible: omarchyReleaseInput.text === ""
+            text: "Omarchy release (optional)"
+            color: Color.popups.text
+            opacity: 0.45
+            font: omarchyReleaseInput.font
+          }
+        }
+      }
+
+      Rectangle {
+        width: 216
+        height: Math.max(34, Style.spacing.controlHeight)
+        radius: Style.cornerRadius
+        color: Color.popups.background
+        border.color: serviceTokenInput.activeFocus ? Color.accent : Color.popups.border
+        border.width: 1
+
+        TextInput {
+          id: serviceTokenInput
+          anchors.fill: parent
+          anchors.leftMargin: 10
+          anchors.rightMargin: 10
+          verticalAlignment: TextInput.AlignVCenter
+          clip: true
+          echoMode: TextInput.Password
+          text: root.panel ? root.panel.serviceAccessToken : ""
+          color: Color.popups.text
+          font.family: Style.font.family
+          font.pixelSize: Style.font.bodySmall
+          selectByMouse: true
+          onTextEdited: if (root.panel) root.panel.serviceAccessToken = text
+
+          Text {
+            anchors.fill: parent
+            verticalAlignment: Text.AlignVCenter
+            visible: serviceTokenInput.text === ""
+            text: "Access token (optional)"
+            color: Color.popups.text
+            opacity: 0.45
+            font: serviceTokenInput.font
+          }
+        }
+      }
+    }
+
+    Row {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+      width: 440
+      spacing: 8
+
+      Button {
+        width: 216
+        height: Math.max(34, Style.spacing.controlHeight)
+        text: "Inspect trust boundary"
+        bordered: true
+        focusable: true
+        enabled: !root.commandRunning
+        onClicked: if (root.panel) root.panel.inspectService()
+      }
+
+      Button {
+        width: 216
+        height: Math.max(34, Style.spacing.controlHeight)
+        text: "Query managed service"
+        bordered: true
+        focusable: true
+        enabled: !root.commandRunning
+        onClicked: if (root.panel) root.panel.queryService()
+      }
+    }
+
+    Text {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+      width: 440
+      wrapMode: Text.WrapAnywhere
+      text: root.panel ? root.panel.serviceSummary : ""
+      color: root.panel && root.panel.serviceReady ? Color.accent : Color.popups.text
+      opacity: root.panel && root.panel.serviceReady ? 0.85 : 0.6
+      font.family: Style.font.family
+      font.pixelSize: Style.font.caption
+      }
     }
   }
 }

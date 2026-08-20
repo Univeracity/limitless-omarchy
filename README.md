@@ -7,8 +7,9 @@ Before an agent creates a new customization, this adapter lets it ask whether
 one owner-authorized prior result is eligible for the current Omarchy receiver.
 It returns one exact component, one source-free method, or a safe abstention.
 
-This repository contains a native Quattro panel and its companion CLI. It is
-not an Omarchy plugin directory, package manager, or hosted service client.
+This repository contains a native Quattro panel, its companion CLI, and an
+opt-in client for the public managed-service wire contract. It is not an
+Omarchy plugin directory or package manager.
 Omarchy's Git-based plugin ecosystem remains responsible for ordinary public
 plugin distribution.
 
@@ -35,10 +36,10 @@ runtime and optional companion CLI:
 - does not silently install or enable a plugin; and
 - leaves decisions and evidence local.
 
-The managed Limitless service is deliberately outside this repository. It may
-later coordinate private catalogs, identity, scopes, revocation, and
-owner-authorized sharing. Connecting must never publish local work; capture
-and sharing remain separate actions.
+The managed Limitless implementation remains outside this repository. An
+owner can explicitly supply a profile that pins its endpoint, trust root,
+policy, data-use mode, and scopes. Connecting never publishes local work;
+capture and sharing remain separate actions.
 
 ## Use it from Omarchy
 
@@ -60,6 +61,26 @@ The panel never installs or enables a desktop change, captures a session, or
 shares work. It only creates the per-user runtime after the explicit button
 press, queries the catalog you select, and shows a component, method, or safe
 abstention.
+
+## Optional managed service from the panel
+
+Local use is always available without a service profile. To inspect an
+explicitly authorized managed service, open **Use managed service (optional)**
+and provide an absolute profile path. **Inspect trust boundary** verifies the
+pinned service identity, root-key history, policy digest, protocol, and result
+keys without sending a task query.
+
+After inspection, enter one customization objective and select **Query managed
+service**. The panel sends that objective plus the minimal Omarchy receiver
+context under the profile's declared data-use mode and scopes. An optional
+bearer credential is masked, sent to the panel-owned process over stdin, and
+cleared with the objective after dispatch. Neither is placed in argv,
+environment, the profile, or a local file by the plugin.
+
+The result must be signed, current, bound to the exact query, policy-compatible,
+and receiver-compatible before the panel displays it. Service unavailability
+returns control to local reuse. Inspecting or querying never installs a plugin,
+captures local work, uploads a catalog, or enables sharing.
 
 Omarchy currently opens a terminal for its third-party-plugin Add flow so that
 its review warning and clone output remain visible. That host-controlled step
@@ -95,9 +116,24 @@ Validate this plugin using Omarchy's own validator:
 
     limitless-omarchy validate-plugin .
 
-The query returns a structured local-only result. An unavailable catalog,
-missing core library, ambiguous candidate, or compatibility mismatch produces
-an abstention rather than a best-effort selection.
+Verify an explicitly selected service profile without sending a task:
+
+    limitless-omarchy service-inspect --profile /absolute/path/to/service-profile.json
+
+For a lower-level managed query, provide one
+`limitless.omarchy-service-query-input/0.1` JSON line on stdin. Keeping the
+objective and optional token on stdin prevents them from appearing in the
+process list:
+
+    limitless-omarchy service-query \
+      --profile /absolute/path/to/service-profile.json \
+      < /path/to/ephemeral-query-input.json
+
+The local-catalog query returns a structured local-only result. An unavailable
+catalog, missing core library, ambiguous candidate, or compatibility mismatch
+produces an abstention rather than a best-effort selection. The service query
+returns only a verified managed result or an explicit local-still-available
+fallback.
 
 The Omarchy-specific query surface is intentionally bounded to the
 `omarchy-customization` task kind, private scope, and `adopt` or `instantiate`
@@ -186,10 +222,11 @@ For a real-session validation path, use the non-mutating
 | Repository | Responsibility |
 | --- | --- |
 | Limitless Library | Generic local reuse core, capsule contracts, MCP and CLI surfaces, receipts, and conformance |
-| This repository | Omarchy profile, Quattro panel, native validation integration, explicit generic-provider handoff, examples, and tests |
+| This repository | Omarchy profile, Quattro panel, native validation integration, opt-in managed-service client, explicit generic-provider handoff, examples, and tests |
 | Private Limitless service | Identity, policy, scopes, private catalog coordination, revocation, and managed verification |
 
 ## Status
 
-Initial local-first implementation. The panel has no hosted-service connection
-and intentionally exposes no sharing control.
+Initial local-first implementation with an explicit managed-service connector.
+No service profile is bundled, and the panel intentionally exposes no capture
+or sharing control.

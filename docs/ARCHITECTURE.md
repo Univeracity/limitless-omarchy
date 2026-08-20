@@ -48,9 +48,11 @@ configuration, or makes a service connection.
 
 The panel invokes a bundled runtime script rather than assuming the companion
 CLI exists on `PATH`. The script accepts an explicit plugin-root argument,
-requires an absolute XDG data directory, and has only `status`, `setup`,
-`query`, and `query-demo` actions. Setup is never automatic. A caller can
-still prefill a catalog path in a summon payload, or enter one through the
+requires an absolute XDG data directory, and exposes `status`, `setup`,
+`query`, `query-demo`, `service-inspect`, and `service-query` actions. The
+service actions remain unreachable until the owner supplies an absolute
+profile path and explicitly invokes one. Setup is never automatic. A caller
+can still prefill a catalog path in a summon payload, or enter one through the
 panel UI.
 
 No UI path silently installs, enables, or shares a customization. Exact
@@ -77,10 +79,24 @@ configuration for an owner who has deliberately chosen a general local
 catalog. The default `mcp` entry point remains bounded to private
 Omarchy-customization requests.
 
-## Service boundary
+## Opt-in service boundary
 
-The private Limitless service may later coordinate owner-authorized private
-capsules across devices, organizations, and scoped exchange circles. It owns
-identity, scopes, grants, revocation, and managed coordination. This plugin
-must work without those facilities and must not make service connection imply
-capture or publication.
+The panel exposes a separate, collapsed managed-service section. It requires
+an owner-supplied profile containing the exact HTTPS endpoint, service
+identity, pinned Ed25519 root, accepted policy digest, data-use mode, and
+maximum scopes. No endpoint is discovered implicitly and ordinary panel
+startup never makes a service request.
+
+Inspection verifies root transitions and signed discovery without submitting
+an objective. A query sends one explicit objective and the minimal receiver
+context over the public Limitless service contract. The optional bearer token
+travels from the masked UI field to the panel-owned process over stdin and is
+cleared with the objective after dispatch; neither is written to argv,
+environment, profile, or disk. The adapter returns only a verified signed
+decision or an explicit availability abstention. Trust or policy failures are
+errors, not abstentions.
+
+The private service owns identity, policy evaluation, scopes, grants,
+revocation, ranking, persistence, and managed coordination. The plugin works
+without those facilities and never makes connection imply capture,
+publication, installation, or enablement.

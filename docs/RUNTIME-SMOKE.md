@@ -18,6 +18,15 @@ Confirm all of the following manually:
 6. No desktop customization was installed, enabled, updated, removed, or
    shared by the panel.
 
+If you have a separately issued service profile, also confirm:
+
+1. Expanding **Use managed service (optional)** makes no request by itself.
+2. **Inspect trust boundary** verifies the profile without sending an
+   objective.
+3. A managed query clears the masked token field after dispatch.
+4. A signed selection, explicit abstention, or availability fallback is shown
+   without changing the local catalog or enabling a plugin.
+
 For lower-level, non-mutating validation of a checked-out repository, the
 optional companion smoke command remains available:
 

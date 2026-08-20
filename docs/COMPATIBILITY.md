@@ -15,7 +15,7 @@ The contract is pinned in CI to Omarchy commit
 checking changes to the plugin manifest, lifecycle, and validator behavior.
 
 The Python package also pins the public Limitless Library core to commit
-3cc4839f87202422541a6aaa57a97d635f87f409. Update it only after running this
+98a397ac6c788b27c39b371008f837a879222584. Update it only after running this
 adapter's full test, package, and distribution checks against the candidate
 core revision.
 
@@ -28,8 +28,9 @@ into `XDG_DATA_HOME/limitless-omarchy/runtime`; no system-Python installation,
 privileged action, or agent-side MCP configuration is supported or required.
 
 The first setup may use network access to resolve the pinned public core and
-its Python dependencies. Queries after setup use the owner-selected local
-catalog; they do not require network access or a managed Limitless service.
+its Python dependencies. Local queries after setup use the owner-selected
+catalog and require no network or managed service. Managed queries occur only
+after the owner expands that UI section and selects Inspect or Query.
 
 ## Compatibility matching
 
@@ -45,3 +46,10 @@ query:
 
 No local profile is a claim that all arbitrary plugin code is safe. An exact
 component must still be reviewed and deliberately enabled by the owner.
+
+For a managed query, the adapter translates the same bounded profile into the
+public receiver context: current host platform and architecture, Python
+execution version, the `omarchy.plugin/v1` interface, and an Omarchy target.
+An explicitly supplied numeric Omarchy release becomes an exact target range;
+an unknown or nonnumeric release remains `any`, which requires a returned
+component to declare correspondingly broad compatibility.

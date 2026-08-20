@@ -33,7 +33,7 @@ def test_package_pins_a_public_limitless_library_revision() -> None:
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
     assert "limitless-library @ git+https://github.com/univeracity/limitlesslibrary.git@" in project
-    assert "3cc4839f87202422541a6aaa57a97d635f87f409" in project
+    assert "98a397ac6c788b27c39b371008f837a879222584" in project
 
 
 def test_cli_keeps_local_queries_bounded_to_omarchy_private_reuse() -> None:
@@ -54,9 +54,21 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "function installRuntime()" in panel
     assert "function queryCatalog()" in panel
     assert "function queryExample()" in panel
+    assert "function inspectService()" in panel
+    assert "function queryService()" in panel
+    assert "stdinEnabled: true" in panel
+    assert "command.write(root.pendingInput" in panel
+    assert 'root.serviceAccessToken = ""' in panel
+    assert 'root.serviceObjective = ""' in panel
     assert "PanelContents" in panel
+    assert "Flickable" in contents
+    assert "Math.min(content.implicitHeight + 40, 680)" in contents
     assert "TextInput" in contents
     assert "Try included example" in contents
+    assert "Use managed service (optional)" in contents
+    assert "Inspect trust boundary" in contents
+    assert "Query managed service" in contents
+    assert "echoMode: TextInput.Password" in contents
     assert "WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive" in panel
     assert "selectionReference" in panel
     assert "method.summary" in panel
@@ -83,6 +95,10 @@ def test_panel_runtime_is_syntax_valid_and_never_targets_system_python() -> None
     assert "sudo" not in text
     assert '"$python_command" -m venv "$runtime"' in text
     assert 'mv -- "$stage/venv" "$runtime"' not in text
+    assert "service-inspect" in text
+    assert "service-query" in text
+    assert "--objective" not in text
+    assert "LIMITLESS_SERVICE_TOKEN" not in text
 
 
 def test_panel_runtime_reports_setup_required_without_writing_to_the_system_python(tmp_path: Path) -> None:
@@ -114,6 +130,15 @@ def test_runtime_smoke_harness_is_syntax_valid_and_non_mutating() -> None:
     assert "omarchy plugin add" not in text
     assert "omarchy plugin enable" not in text
     assert "omarchy plugin remove" not in text
+
+
+def test_visual_harness_renders_the_production_scroll_surface() -> None:
+    harness = (ROOT / "tests" / "runtime" / "visual.qml").read_text(encoding="utf-8")
+
+    assert "source: root.panelContentsPath" in harness
+    assert '"/service-top.png"' in harness
+    assert '"/service-bottom.png"' in harness
+    assert "scroll.contentY = Math.max(0, scroll.contentHeight - scroll.height)" in harness
 
 
 def _mock_command(directory: Path, name: str, source: str) -> None:

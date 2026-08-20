@@ -20,7 +20,14 @@ project.
 
 ## Data boundary
 
-The local adapter must not transmit prompts, arbitrary configuration,
+The local adapter does not transmit prompts, arbitrary configuration,
 screenshots, desktop telemetry, command history, raw verifier output, or
-agent workspace data. A future managed-service connection must remain opt-in
-and must not imply publication of local work.
+agent workspace data.
+
+Managed use is a distinct opt-in boundary. The owner supplies a profile that
+pins endpoint, service identity, trust root, policy digest, data-use mode, and
+scopes. Inspection sends no task. Query sends only the explicit objective and
+minimal Omarchy receiver context. An optional bearer token travels over stdin,
+is cleared with the objective after dispatch, and neither is stored in argv,
+environment, profile, or disk by this plugin. Connecting does not publish a
+capsule, upload a local catalog, install a result, or enable sharing.

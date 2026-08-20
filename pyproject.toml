@@ -12,7 +12,7 @@ license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 authors = [{name = "Limitless Library"}]
 dependencies = [
-  "limitless-library @ git+https://github.com/univeracity/limitlesslibrary.git@3cc4839f87202422541a6aaa57a97d635f87f409",
+  "limitless-library @ git+https://github.com/univeracity/limitlesslibrary.git@98a397ac6c788b27c39b371008f837a879222584",
 ]
 keywords = ["agents", "omarchy", "quickshell", "reuse", "verification"]
 classifiers = [
@@ -27,7 +27,9 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
+  "bandit>=1.8,<2",
   "build>=1.2,<2",
+  "pip-audit>=2.9,<3",
   "pytest>=9.0.3,<10",
   "ruff>=0.12,<1",
 ]

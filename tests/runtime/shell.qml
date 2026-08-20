@@ -52,6 +52,12 @@ ShellRoot {
     repeat: false
     onTriggered: {
       if (root.visualAction === "example" && panel.item) panel.item.queryExample()
+      if (root.visualAction === "service" && panel.item) {
+        panel.item.runtimeReady = true
+        panel.item.serviceExpanded = true
+        panel.item.headline = "Local Library ready"
+        panel.item.detail = "Local reuse remains available. Managed discovery is an explicit opt-in."
+      }
     }
   }
 
@@ -84,6 +90,7 @@ ShellRoot {
       headline: panel.item ? panel.item.headline : "",
       detail: panel.item ? panel.item.detail : "",
       selectionReference: panel.item ? panel.item.selectionReference : "",
+      serviceExpanded: panel.item ? panel.item.serviceExpanded : false,
       errorText: panel.item ? panel.item.errorText : ""
     }
     if (visualHold) {
