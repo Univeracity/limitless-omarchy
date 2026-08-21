@@ -15,7 +15,7 @@ The contract is pinned in CI to Omarchy commit
 checking changes to the plugin manifest, lifecycle, and validator behavior.
 
 The Python package also pins the public Limitless Library core to commit
-a86d4dd8d9ee27bb62b3999a41e5fe137827856a. Update it only after running this
+0a400fd27eac71fceb900c09efef784acb8a2f75. Update it only after running this
 adapter's full test, package, and distribution checks against the candidate
 core revision.
 
