@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 from datetime import UTC, datetime
+from hashlib import sha256
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -12,7 +13,7 @@ from types import SimpleNamespace
 import limitless_library
 import pytest
 from limitless_library.catalog import seal_capsule
-from limitless_library.contracts import load_json
+from limitless_library.contracts import load_json, write_new_bytes
 from limitless_library.mcp_protocol import modern_metadata
 from limitless_library.mcp_server import TOOL_NAME as GENERAL_TOOL_NAME
 from limitless_library.service_connector import (
@@ -20,6 +21,7 @@ from limitless_library.service_connector import (
     ServiceProfile,
     ServiceUnavailableError,
 )
+from limitless_library.service_identity import InstallationSigner
 
 from limitless_omarchy import service as service_module
 from limitless_omarchy.adapter import (
@@ -31,7 +33,11 @@ from limitless_omarchy.adapter import (
     status,
     validate_plugin,
 )
-from limitless_omarchy.cli import _service_publication_input, _service_query_input
+from limitless_omarchy.cli import (
+    _service_artifact_stage_input,
+    _service_publication_input,
+    _service_query_input,
+)
 from limitless_omarchy.mcp_server import TOOL_NAME, handle_message
 from limitless_omarchy.provider import general_provider_command
 from limitless_omarchy.service import (
@@ -40,6 +46,7 @@ from limitless_omarchy.service import (
     inspect_managed_service,
     manage_publication,
     query_managed_service,
+    stage_managed_artifact,
 )
 
 ROOT = Path(__file__).parents[1]
@@ -144,6 +151,31 @@ class UnavailableServiceConnector(FakeServiceConnector):
 class InvalidAuthorityConnector(FakeServiceConnector):
     def inspect(self) -> object:
         raise ServiceConnectorError("invalid authority")
+
+
+class ArtifactContinuationConnector(FakeServiceConnector):
+    artifact = b"reviewed-omarchy-plugin-bundle"
+
+    def fetch_selected_artifact_continuation(
+        self,
+        *,
+        result: dict[str, object],
+        expected_request_digest: str,
+        destination: Path,
+    ) -> dict[str, object]:
+        assert result["requestDigest"] == expected_request_digest
+        write_new_bytes(destination, self.artifact)
+        immutable = result["selection"]["immutable"]  # type: ignore[index]
+        return {
+            "schemaVersion": "limitless.staged-service-artifact/1.0",
+            "decisionRef": result["decisionRef"],
+            "capabilityId": result["selection"]["capabilityId"],  # type: ignore[index]
+            "revision": immutable["revision"],
+            "digest": immutable["digest"],
+            "byteLength": len(self.artifact),
+            "path": str(destination),
+            "nextAction": result["nextAction"],
+        }
 
 
 def test_profile_is_minimal_and_marks_shell_availability() -> None:
@@ -283,7 +315,7 @@ def test_managed_query_returns_verified_shape_without_echoing_sensitive_input(tm
     encoded = json.dumps(result)
     assert result["mode"] == "managed-service"
     assert result["disposition"] == "source-free-method"
-    assert result["decision"]["selection"]["title"] == "Reviewed focus method"
+    assert result["selection"]["title"] == "Reviewed focus method"
     assert "Find a reviewed" not in encoded
     assert "test-access-token-value" not in encoded
     assert result["service"]["authenticated"] is True
@@ -300,7 +332,107 @@ def test_managed_unavailability_abstains_without_disabling_local_reuse(tmp_path:
 
     assert result["disposition"] == "abstain"
     assert result["reason"] == "service-unavailable-local-still-available"
-    assert result["decision"] is None
+    assert result["selection"] is None
+
+
+def test_exact_result_projects_no_delivery_secret_and_stages_from_signed_local_state(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    profile = ServiceProfile.from_json(load_json(service_profile(tmp_path)))
+    connector = ArtifactContinuationConnector(profile)
+    signer = InstallationSigner.generate()
+    publisher = {
+        "publisherId": "installation:" + "1" * 32,
+        "authorityId": "installation-space:" + "2" * 32,
+        "keyId": signer.key_id,
+        "generation": 1,
+    }
+    artifact_digest = "sha256:" + sha256(connector.artifact).hexdigest()
+    request_digest = "sha256:" + "3" * 64
+    decision = {
+        "schemaVersion": "limitless.service-query-result/1.3",
+        "requestDigest": request_digest,
+        "decisionRef": "decision:omarchy-artifact-test",
+        "treatment": "exact-component",
+        "selection": {
+            "capabilityId": "capability:omarchy-artifact-test",
+            "title": "Reviewed exact plugin",
+            "summary": "An exact plugin bundle for receiver review.",
+            "immutable": {
+                "kind": "artifact",
+                "revision": "1.0.0",
+                "digest": artifact_digest,
+                "uri": "https://objects.example.test/v1/artifact",
+                "authorization": {
+                    "header": "Limitless-Capability",
+                    "value": "A" * 43,
+                },
+            },
+        },
+        "nextAction": {
+            "kind": "handoff-native-add",
+            "instruction": "Review before native installation.",
+            "checks": [
+                {
+                    "id": "interface",
+                    "predicate": "interface-subset",
+                    "expected": "omarchy.plugin/v1",
+                }
+            ],
+            "localReuseAvailable": True,
+            "handoff": "omarchy-native-add",
+        },
+        "resultDigest": "sha256:" + "4" * 64,
+    }
+    environment = {
+        "HOME": str(tmp_path / "home"),
+        "XDG_STATE_HOME": str(tmp_path / "state"),
+    }
+    state = service_module._write_handoff_state(
+        connector=connector,
+        result=decision,
+        signer=signer,
+        publisher=publisher,
+        environ=environment,
+    )
+    projected = service_module._managed_result(
+        connector=connector,
+        local_profile=discover_profile(omarchy_release="4.2", runner=shell_available),
+        query={"queryDigest": request_digest},
+        decision=decision,
+        handoff_state_path=state,
+    )
+    monkeypatch.setattr(service_module, "activated_service_connector", lambda: connector)
+    monkeypatch.setattr(
+        service_module,
+        "installation_publisher_authority",
+        lambda *, service_id: (signer, publisher),
+    )
+
+    staged = stage_managed_artifact(state, environ=environment)
+
+    assert state.stat().st_mode & 0o777 == 0o600
+    assert projected["handoffStatePath"] == str(state)
+    assert "authorization" not in json.dumps(projected)
+    assert "A" * 43 not in json.dumps(projected)
+    assert "objects.example.test" not in json.dumps(projected)
+    assert staged["nativeInstallationRequired"] is True
+    assert Path(staged["path"]).read_bytes() == connector.artifact
+    assert Path(staged["path"]).stat().st_mode & 0o777 == 0o600
+    assert stage_managed_artifact(state, environ=environment) == staged
+
+    renamed = state.with_name("5" * 64 + ".json")
+    write_new_bytes(renamed, state.read_bytes())
+    with pytest.raises(AdapterError, match="continuation is unbound"):
+        stage_managed_artifact(renamed, environ=environment)
+
+    tampered = json.loads(state.read_text(encoding="utf-8"))
+    tampered["result"]["selection"]["title"] = "Substituted plugin"
+    state.write_text(json.dumps(tampered), encoding="utf-8")
+    state.chmod(0o600)
+    with pytest.raises(AdapterError, match="signature is invalid"):
+        stage_managed_artifact(state, environ=environment)
 
 
 def test_service_authority_failure_is_not_reclassified_as_an_abstention(tmp_path: Path) -> None:
@@ -395,6 +527,22 @@ def test_service_publication_cli_rejects_relative_or_unaccepted_input(
 
     with pytest.raises(AdapterError, match="path is invalid"):
         _service_publication_input()
+
+
+def test_service_artifact_stage_cli_accepts_only_one_absolute_state_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "schemaVersion": "limitless.omarchy-artifact-stage-input/0.1",
+        "handoffStatePath": "/home/user/.local/state/limitless-omarchy/artifact-handoffs/" + "4" * 64 + ".json",
+    }
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        SimpleNamespace(buffer=BytesIO((json.dumps(payload) + "\n").encode("utf-8"))),
+    )
+
+    assert _service_artifact_stage_input() == Path(payload["handoffStatePath"])
 
 
 def test_managed_publication_uses_current_anonymous_authority_and_projects_result(

@@ -50,15 +50,19 @@ The panel invokes a bundled runtime script rather than assuming the companion
 CLI exists on `PATH`. The script accepts an explicit plugin-root argument,
 requires an absolute XDG data directory, and exposes `status`, `setup`,
 `query`, `query-demo`, `service-activate`, `service-inspect`, and
-`service-query` actions. Service activation is one explicit UI action and uses
-only trust material pinned in the installed public Library release; ordinary
-users never manage a profile path or API key. Setup is never automatic. A caller
-can still prefill a catalog path in a summon payload, or enter one through the
-panel UI.
+`service-query`, `service-artifact-stage`, and `service-publication` actions.
+Service activation is one explicit UI action and uses only trust material
+pinned in the installed public Library release; ordinary users never manage a
+profile path or API key. Setup is never automatic. A caller can still prefill a
+catalog path in a summon payload, or enter one through the panel UI.
 
-No UI path silently installs, enables, or shares a customization. Exact
-components remain subject to Omarchy's native Git installation, validation,
-review, and explicit enablement flow.
+No UI path silently installs, enables, or shares a customization. An exact
+managed result keeps its delivery capability in owner-only installation-signed
+state; the panel can redeem that state into digest-verified staging without
+retaining the objective. Staging still does not infer an artifact format or an
+installation target. Exact components remain subject to an explicit reviewed
+receiver adapter plus Omarchy's native installation, validation, review, and
+enablement flow.
 
 The companion also provides an Omarchy-aware local MCP tool. It derives the
 same minimal receiver profile before calling the generic Library decision

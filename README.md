@@ -85,6 +85,14 @@ and receiver-compatible before the panel displays it. Service unavailability
 returns control to local reuse. Inspecting or querying never installs a plugin,
 captures local work, uploads a catalog, or enables sharing.
 
+When an exact artifact is selected, the panel saves its delivery authority only
+inside an owner-only, installation-signed continuation; the visible result does
+not contain that capability. **Stage verified component for review** redeems the
+continuation into a new digest-verified owner-only file without retaining the
+objective. Staging is deliberately not installation: an explicit reviewed
+receiver adapter and Omarchy's native validation/review/enable boundary remain
+required.
+
 Public contribution is a separate, explicit panel action. Open **Share a
 reviewed contribution (optional)**, select one absolute path to a reviewed
 `limitless.publication-draft/1.0` file, inspect and accept the currently
@@ -150,6 +158,11 @@ acceptance therefore remain out of the process list. Direct CLI use is optional:
 
     limitless-omarchy service-publication \
       < /path/to/ephemeral-publication-input.json
+
+Exact-artifact staging is likewise available as the optional
+`service-artifact-stage` command. It accepts only one bounded
+`limitless.omarchy-artifact-stage-input/0.1` JSON line on stdin; the ordinary
+panel supplies the owner-only continuation path itself.
 
 `--profile /absolute/path/to/owner-reviewed-profile.json` remains available on
 inspection and query commands as advanced lower-level control for another

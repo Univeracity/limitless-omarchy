@@ -15,6 +15,7 @@ from .service import (
     inspect_managed_service,
     manage_publication,
     query_managed_service,
+    stage_managed_artifact,
 )
 
 __all__ = [
@@ -28,6 +29,7 @@ __all__ = [
     "query_local_catalog",
     "query_managed_service",
     "seal_local_capsule",
+    "stage_managed_artifact",
     "status",
     "validate_plugin",
 ]

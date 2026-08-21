@@ -31,6 +31,7 @@ Actions:
   service-inspect  verify the enabled official service
   service-query    read one managed query as a bounded JSON line from stdin
   service-publication read one explicit publication action from bounded stdin
+  service-artifact-stage redeem one exact-artifact continuation from bounded stdin
 
 The panel invokes this script itself. It is also intentionally usable as a
 lower-level diagnostic surface; it never installs into the system Python.
@@ -78,7 +79,7 @@ while (($#)); do
 done
 
 case "$action" in
-  status|setup|query|query-demo|service-activate|service-inspect|service-query|service-publication) ;;
+  status|setup|query|query-demo|service-activate|service-inspect|service-query|service-publication|service-artifact-stage) ;;
   *)
     fail "unrecognized action: $action"
     ;;
@@ -176,5 +177,9 @@ case "$action" in
   service-publication)
     runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
     exec "$runtime_cli" service-publication
+    ;;
+  service-artifact-stage)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    exec "$runtime_cli" service-artifact-stage
     ;;
 esac

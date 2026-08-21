@@ -20,6 +20,9 @@ Item {
   property bool serviceExpanded: false
   property bool serviceReady: false
   property string serviceSummary: "No managed-service request has been made."
+  property string serviceArtifactHandoffStatePath: ""
+  property string serviceArtifactStagedPath: ""
+  property bool serviceArtifactStageAvailable: false
   property bool publicationExpanded: false
   property string publicationDraftPath: ""
   property string publicationStatePath: ""
@@ -52,6 +55,9 @@ Item {
     if (payload.omarchyRelease !== undefined) omarchyRelease = String(payload.omarchyRelease)
     serviceReady = false
     serviceSummary = "No managed-service request has been made."
+    serviceArtifactHandoffStatePath = ""
+    serviceArtifactStagedPath = ""
+    serviceArtifactStageAvailable = false
     publicationPolicyAccepted = false
     publicationPolicyReady = false
     publicationPolicyUrl = ""
@@ -118,6 +124,18 @@ Item {
       accessToken: null
     })
     runRuntime("service-query", arguments, input)
+  }
+
+  function stageServiceArtifact() {
+    if (!serviceArtifactStageAvailable || !serviceArtifactHandoffStatePath.startsWith("/")) {
+      errorText = "No locally bound exact-artifact continuation is available."
+      return
+    }
+    var input = JSON.stringify({
+      schemaVersion: "limitless.omarchy-artifact-stage-input/0.1",
+      handoffStatePath: serviceArtifactHandoffStatePath
+    })
+    runRuntime("service-artifact-stage", [], input)
   }
 
   function publishContribution() {
@@ -253,8 +271,11 @@ Item {
     if (value.schemaVersion === "limitless.omarchy-service-result/0.1") {
       runtimeReady = true
       disposition = String(value.disposition || "abstain")
-      var serviceDecision = value.decision || null
-      var serviceSelection = serviceDecision && serviceDecision.selection ? serviceDecision.selection : null
+      var serviceSelection = value.selection || null
+      serviceArtifactHandoffStatePath = String(value.handoffStatePath || "")
+      serviceArtifactStageAvailable = disposition === "exact-component"
+        && serviceArtifactHandoffStatePath.startsWith("/")
+      serviceArtifactStagedPath = ""
       selectionReference = serviceSelection && serviceSelection.title
         ? String(serviceSelection.title)
         : String(value.requestDigest || "")
@@ -262,8 +283,7 @@ Item {
         var immutable = serviceSelection && serviceSelection.immutable ? serviceSelection.immutable : {}
         headline = "Verified component available"
         detail = String(serviceSelection.summary || "A compatible exact component was selected.")
-          + " Review " + String(immutable.uri || "the pinned source")
-          + " and continue through Omarchy's native add flow."
+          + " Stage its exact bytes for review before choosing a receiver-native installation."
       } else if (disposition === "source-free-method") {
         var serviceMethod = serviceSelection && serviceSelection.method ? serviceSelection.method : {}
         headline = "Verified method available"
@@ -281,6 +301,17 @@ Item {
       serviceSummary = serviceReady
         ? "Signed service result verified against the activated authority."
         : "Service unavailable; local reuse remains available."
+      return
+    }
+    if (value.schemaVersion === "limitless.omarchy-artifact-stage-result/0.1") {
+      runtimeReady = true
+      disposition = "exact-component"
+      serviceArtifactStageAvailable = false
+      serviceArtifactStagedPath = String(value.path || "")
+      selectionReference = String(value.digest || "")
+      headline = "Verified component staged"
+      detail = "Exact bytes were fetched with the locally bound continuation and verified before owner-only staging. No installation or enablement occurred."
+      serviceSummary = "Receiver-native review and installation are still required."
       return
     }
     if (value.schemaVersion === "limitless.omarchy-publication-result/0.1") {

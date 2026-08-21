@@ -19,6 +19,7 @@ from .service import (
     inspect_managed_service,
     manage_publication,
     query_managed_service,
+    stage_managed_artifact,
 )
 
 MAX_SERVICE_INPUT_BYTES = 8 * 1024
@@ -130,6 +131,33 @@ def _service_publication_input() -> dict[str, Any]:
     }
 
 
+def _service_artifact_stage_input() -> Path:
+    raw = sys.stdin.buffer.readline(MAX_SERVICE_INPUT_BYTES + 1)
+    if not raw or len(raw) > MAX_SERVICE_INPUT_BYTES or not raw.endswith(b"\n"):
+        raise AdapterError("artifact stage input must be one bounded JSON line on stdin")
+    try:
+        value = strict_json_loads(raw.decode("utf-8"))
+    except (UnicodeError, ValueError) as error:
+        raise AdapterError("artifact stage input is invalid") from error
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"schemaVersion", "handoffStatePath"}
+        or value.get("schemaVersion") != "limitless.omarchy-artifact-stage-input/0.1"
+    ):
+        raise AdapterError("artifact stage input has an unsupported shape")
+    configured = value["handoffStatePath"]
+    if (
+        not isinstance(configured, str)
+        or not configured
+        or len(configured) > 4096
+        or "\x00" in configured
+        or not Path(configured).is_absolute()
+        or ".." in Path(configured).parts
+    ):
+        raise AdapterError("artifact handoff state path is invalid")
+    return Path(configured)
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -192,6 +220,10 @@ def _parser() -> argparse.ArgumentParser:
         "service-publication",
         help="publish, inspect, or withdraw one explicitly selected contribution",
     )
+    subparsers.add_parser(
+        "service-artifact-stage",
+        help="redeem one locally bound exact-artifact continuation into safe staging",
+    )
     return parser
 
 
@@ -238,6 +270,8 @@ def main() -> None:
             )
         elif args.command == "service-publication":
             _print(manage_publication(**_service_publication_input()))
+        elif args.command == "service-artifact-stage":
+            _print(stage_managed_artifact(_service_artifact_stage_input()))
     except AdapterError as error:
         print(f"limitless-omarchy: {error}", file=sys.stderr)
         raise SystemExit(2) from error

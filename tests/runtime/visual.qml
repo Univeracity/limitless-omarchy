@@ -16,6 +16,7 @@ ShellRoot {
     property bool runtimeReady: true
     property bool serviceExpanded: true
     property bool serviceReady: true
+    property bool serviceArtifactStageAvailable: true
     property bool publicationExpanded: true
     property bool publicationPolicyAccepted: false
     property bool publicationPolicyReady: true
@@ -29,6 +30,8 @@ ShellRoot {
     property string serviceObjective: "Find a recent customization that improves workspace focus"
     property string omarchyRelease: "2026.08"
     property string serviceSummary: "Pinned service · private · local-only · accepted policy"
+    property string serviceArtifactHandoffStatePath: "/home/user/.local/state/limitless-omarchy/handoff.json"
+    property string serviceArtifactStagedPath: ""
     property string publicationDraftPath: "/home/user/reviewed/publication.draft.json"
     property string publicationStatePath: "/home/user/reviewed/publication.draft.json.state.json"
     property string publicationSummary: "No public contribution has been submitted."
@@ -42,6 +45,7 @@ ShellRoot {
     function activateService() {}
     function inspectService() {}
     function queryService() {}
+    function stageServiceArtifact() {}
     function publishContribution() {}
     function inspectPublication() {}
     function withdrawPublication() {}
