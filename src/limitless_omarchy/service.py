@@ -18,6 +18,7 @@ from limitless_library.official_service import (
     OfficialServiceActivationError,
     OfficialServiceUnavailableError,
     activate_official_service,
+    activated_service_connector,
     activated_service_profile,
 )
 from limitless_library.service_connector import (
@@ -42,6 +43,8 @@ def _service_connector(
     connector_factory: ConnectorFactory,
 ) -> ServiceConnector:
     try:
+        if profile_path is None and not access_token and connector_factory is ServiceConnector:
+            return activated_service_connector()
         if profile_path is None:
             profile = activated_service_profile(access_token=access_token or None)
         else:

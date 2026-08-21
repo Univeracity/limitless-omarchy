@@ -21,7 +21,8 @@ Confirm all of the following manually:
 If the installed release includes official service trust material, also confirm:
 
 1. Expanding **Use Limitless service (optional)** makes no request by itself.
-2. **Enable official service** requires no profile path, account, or API key.
+2. **Enable official service** requires no profile path, account, or API key
+   and establishes the private installation identity automatically.
 3. **Inspect trust boundary** verifies the activation without sending an
    objective.
 4. A managed query clears the objective after dispatch.

@@ -224,7 +224,7 @@ Item {
       visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
       width: 440
       wrapMode: Text.Wrap
-      text: "Enable verifies the release-pinned service identity, trust root, and policy. No account, profile file, or API key is required. Queries send only the objective and minimal receiver context you approve."
+      text: "Enable verifies the release-pinned service identity, trust root, and policy, then creates a private on-device identity for anonymous access. No account, profile file, or API key is required. Queries send only the objective and minimal receiver context you approve."
       color: Color.popups.text
       opacity: 0.7
       font.family: Style.font.family

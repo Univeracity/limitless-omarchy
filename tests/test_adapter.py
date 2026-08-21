@@ -15,7 +15,11 @@ from limitless_library.catalog import seal_capsule
 from limitless_library.contracts import load_json
 from limitless_library.mcp_protocol import modern_metadata
 from limitless_library.mcp_server import TOOL_NAME as GENERAL_TOOL_NAME
-from limitless_library.service_connector import ServiceConnectorError, ServiceUnavailableError
+from limitless_library.service_connector import (
+    ServiceConnectorError,
+    ServiceProfile,
+    ServiceUnavailableError,
+)
 
 from limitless_omarchy import service as service_module
 from limitless_omarchy.adapter import (
@@ -221,6 +225,41 @@ def test_service_activation_is_one_action_and_persists_no_credential(
     assert result["mode"] == "managed-service-ready"
     assert result["service"]["defaultAudience"] == "private"
     assert result["service"]["authenticated"] is False
+
+
+def test_ordinary_service_path_uses_automatic_anonymous_authority(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+    connector = FakeServiceConnector(
+        ServiceProfile.from_json(
+            {
+                "schemaVersion": "limitless.service-profile/1.1",
+                "apiBaseUrl": "https://service.example",
+                "serviceId": "service:example",
+                "rootKey": {
+                    "keyId": "root:example",
+                    "algorithm": "ed25519",
+                    "publicKey": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                },
+                "acceptedPolicyDigest": "sha256:" + "1" * 64,
+                "executionMode": "service",
+                "defaultAudience": "private",
+                "historyMode": "local-only",
+                "requestedAudiences": ["public"],
+            }
+        )
+    )
+    monkeypatch.setattr(
+        service_module,
+        "activated_service_connector",
+        lambda: calls.append("automatic-session") or connector,
+    )
+
+    result = inspect_managed_service()
+
+    assert calls == ["automatic-session"]
+    assert result["mode"] == "managed-service-ready"
 
 
 def test_managed_query_returns_verified_shape_without_echoing_sensitive_input(tmp_path: Path) -> None:

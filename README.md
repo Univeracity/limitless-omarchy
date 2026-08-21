@@ -69,9 +69,10 @@ Local use is always available without a service connection. Open **Use
 Limitless service (optional)** and select **Enable official service**. That one
 action fetches the exact release-pinned, credential-free profile and verifies
 the service identity, original root, root-key history, policy digest, protocol,
-and result keys before saving activation state. No account, profile download,
-API key, terminal, or agent setup is required. A build without published
-official trust material stays local-only.
+and result keys before saving activation state. It then creates one private,
+service-specific installation key and obtains a short-lived anonymous session.
+No account, profile download, API key, terminal, or agent setup is required. A
+build without published official trust material stays local-only.
 
 After inspection, enter one customization objective and select **Query managed
 service**. The panel sends that objective plus the minimal Omarchy receiver

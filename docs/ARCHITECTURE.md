@@ -90,6 +90,12 @@ accepted policy before storing credential-free XDG-scoped state. No endpoint
 is discovered implicitly and ordinary panel startup never makes a service
 request. Source builds without a locator remain local-only.
 
+The same owner action creates a service-specific Ed25519 installation key,
+verifies the service's signed attestation, and opens the anonymous baseline
+session used by the UI. The key and short-lived bearer are stored separately
+from activation state in an owner-only file. The ordinary UI never asks the
+user to choose protocol capabilities or paste a credential.
+
 Inspection verifies root transitions and signed discovery without submitting
 an objective. A query sends one explicit objective and the minimal receiver
 context over the public Limitless service contract. The objective travels to
