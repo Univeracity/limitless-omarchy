@@ -85,6 +85,18 @@ and receiver-compatible before the panel displays it. Service unavailability
 returns control to local reuse. Inspecting or querying never installs a plugin,
 captures local work, uploads a catalog, or enables sharing.
 
+Public contribution is a separate, explicit panel action. Open **Share a
+reviewed contribution (optional)**, select one absolute path to a reviewed
+`limitless.publication-draft/1.0` file, inspect and accept the currently
+advertised policy for that submission, and select **Publish explicitly selected
+draft**. The panel binds that acceptance to the exact signed policy digest it
+displayed and refuses the submission if the service advertises a different
+digest. The draft itself names every regular file that may be considered;
+Limitless never scans the workspace or infers additional sources. The panel
+uploads only missing, digest-bound objects and saves owner-only resumable state
+beside the draft. That state can later check admission status or withdraw an
+active release from the same panel. Withdrawal requires a second confirmation.
+
 Omarchy currently opens a terminal for its third-party-plugin Add flow so that
 its review warning and clone output remain visible. That host-controlled step
 precedes this plugin. No terminal or agent-side setup is required to operate
@@ -130,6 +142,14 @@ objective on stdin prevents it from appearing in the process list:
 
     limitless-omarchy service-query \
       < /path/to/ephemeral-query-input.json
+
+The panel's publish, status, and withdrawal actions use the same lower-level
+`service-publication` command with one bounded
+`limitless.omarchy-publication-input/0.1` JSON line on stdin. Paths and policy
+acceptance therefore remain out of the process list. Direct CLI use is optional:
+
+    limitless-omarchy service-publication \
+      < /path/to/ephemeral-publication-input.json
 
 `--profile /absolute/path/to/owner-reviewed-profile.json` remains available on
 inspection and query commands as advanced lower-level control for another

@@ -20,6 +20,17 @@ Item {
   property bool serviceExpanded: false
   property bool serviceReady: false
   property string serviceSummary: "No managed-service request has been made."
+  property bool publicationExpanded: false
+  property string publicationDraftPath: ""
+  property string publicationStatePath: ""
+  property bool publicationPolicyAccepted: false
+  property bool publicationPolicyReady: false
+  property string publicationPolicyUrl: ""
+  property string publicationPolicyDigest: ""
+  property string publicationPolicySummary: "Inspect the trust boundary to load the current public publication policy."
+  property bool publicationWithdrawalArmed: false
+  property string publicationSummary: "No public contribution has been submitted."
+  property string publicationOperation: ""
   property bool runtimeReady: false
   property string headline: "Set up Limitless Library"
   property string detail: "Create an isolated local runtime to begin. Nothing will be shared."
@@ -41,6 +52,11 @@ Item {
     if (payload.omarchyRelease !== undefined) omarchyRelease = String(payload.omarchyRelease)
     serviceReady = false
     serviceSummary = "No managed-service request has been made."
+    publicationPolicyAccepted = false
+    publicationPolicyReady = false
+    publicationPolicyUrl = ""
+    publicationPolicyDigest = ""
+    publicationWithdrawalArmed = false
     opened = true
     refresh()
     Qt.callLater(function() { if (opened) keyCatcher.forceActiveFocus() })
@@ -49,6 +65,8 @@ Item {
   function close() {
     opened = false
     serviceObjective = ""
+    publicationPolicyAccepted = false
+    publicationWithdrawalArmed = false
     pendingInput = ""
     if (command.running) command.running = false
   }
@@ -102,6 +120,70 @@ Item {
     runRuntime("service-query", arguments, input)
   }
 
+  function publishContribution() {
+    if (!serviceReady) {
+      errorText = "Enable the official service before publishing."
+      return
+    }
+    if (!publicationDraftPath.trim().startsWith("/")) {
+      errorText = "Choose an absolute path to one reviewed publication draft."
+      return
+    }
+    if (!publicationPolicyAccepted) {
+      errorText = "Review and accept the advertised public publication policy for this submission."
+      return
+    }
+    if (!publicationPolicyReady || publicationPolicyDigest === "") {
+      errorText = "Inspect the current public publication policy before publishing."
+      return
+    }
+    runPublication("publish", publicationDraftPath.trim(), "", publicationPolicyDigest, null)
+  }
+
+  function inspectPublication() {
+    if (!publicationStatePath.trim().startsWith("/")) {
+      errorText = "Choose the absolute local state path for this publication."
+      return
+    }
+    publicationWithdrawalArmed = false
+    runPublication("status", "", publicationStatePath.trim(), null, null)
+  }
+
+  function withdrawPublication() {
+    if (!publicationStatePath.trim().startsWith("/")) {
+      errorText = "Choose the absolute local state path for this publication."
+      return
+    }
+    if (!publicationWithdrawalArmed) {
+      publicationWithdrawalArmed = true
+      publicationSummary = "Withdrawal is durable. Select confirm only if this release should stop being eligible."
+      return
+    }
+    publicationWithdrawalArmed = false
+    runPublication("revoke", "", publicationStatePath.trim(), null, "publisher-withdrawal")
+  }
+
+  function openPublicationPolicy() {
+    if (!publicationPolicyReady || !publicationPolicyUrl.startsWith("https://")) {
+      errorText = "The verified publication policy URL is unavailable."
+      return
+    }
+    Qt.openUrlExternally(publicationPolicyUrl)
+  }
+
+  function runPublication(nextOperation, draftPath, statePath, acceptedDigest, reasonCode) {
+    publicationOperation = nextOperation
+    var input = JSON.stringify({
+      schemaVersion: "limitless.omarchy-publication-input/0.1",
+      operation: nextOperation,
+      draftPath: draftPath === "" ? null : draftPath,
+      statePath: statePath === "" ? null : statePath,
+      acceptedPublicationPolicyDigest: acceptedDigest,
+      reasonCode: reasonCode
+    })
+    runRuntime("service-publication", [], input)
+  }
+
   function runRuntime(nextOperation, arguments, stdinPayload) {
     if (command.running) return
     errorText = ""
@@ -139,9 +221,19 @@ Item {
     if (value.schemaVersion === "limitless.omarchy-service-status/0.1") {
       disposition = "status"
       serviceReady = String(value.mode || "") === "managed-service-ready"
+      publicationPolicyAccepted = false
       if (serviceReady) {
         var service = value.service || {}
         var policy = value.policy || {}
+        var publicationPolicy = value.publicationPolicy || null
+        publicationPolicyReady = publicationPolicy
+          && String(publicationPolicy.url || "").startsWith("https://")
+          && String(publicationPolicy.digest || "").startsWith("sha256:")
+        publicationPolicyUrl = publicationPolicyReady ? String(publicationPolicy.url) : ""
+        publicationPolicyDigest = publicationPolicyReady ? String(publicationPolicy.digest) : ""
+        publicationPolicySummary = publicationPolicyReady
+          ? String(publicationPolicy.revision || "current") + " · " + publicationPolicyDigest
+          : "Inspect the trust boundary to load the current public publication policy."
         headline = "Managed service verified"
         detail = "The release-pinned service authority and policy were verified. No task query was sent."
         serviceSummary = String(service.serviceId || "managed service") + " · "
@@ -149,6 +241,8 @@ Item {
           + String(service.historyMode || "local-only") + " · "
           + String(policy.digest || "policy unavailable")
       } else {
+        publicationPolicyReady = false
+        publicationPolicyAccepted = false
         headline = "Managed service unavailable"
         detail = "Local Library use remains available. No remote selection was fabricated."
         serviceSummary = "Service unavailable; local reuse remains available."
@@ -183,9 +277,33 @@ Item {
           : "No eligible managed result was selected. No candidate details were disclosed."
       }
       serviceReady = value.reason !== "service-unavailable-local-still-available"
+      publicationPolicyAccepted = false
       serviceSummary = serviceReady
         ? "Signed service result verified against the activated authority."
         : "Service unavailable; local reuse remains available."
+      return
+    }
+    if (value.schemaVersion === "limitless.omarchy-publication-result/0.1") {
+      runtimeReady = true
+      var publicationAction = String(value.operation || "")
+      var admission = String(value.admissionState || "unknown")
+      publicationStatePath = String(value.statePath || publicationStatePath)
+      selectionReference = String(value.submissionRef || "")
+      if (publicationAction === "publish") {
+        headline = "Contribution submitted"
+        detail = "Only the files explicitly named by the reviewed draft were considered. Admission state: " + admission + "."
+        publicationSummary = String(value.uploadedObjectCount || 0) + " missing object(s) uploaded · " + admission
+      } else if (publicationAction === "revoke") {
+        headline = "Contribution withdrawn"
+        detail = "The active public release was withdrawn through the same anonymous installation authority."
+        publicationSummary = "Withdrawn · " + admission
+      } else {
+        headline = "Contribution status verified"
+        detail = "Current admission state: " + admission + ". No source bytes were resent."
+        publicationSummary = "Status · " + admission
+      }
+      publicationPolicyAccepted = false
+      publicationOperation = ""
       return
     }
     runtimeReady = true
@@ -218,6 +336,8 @@ Item {
       if (root.pendingInput !== "") command.write(root.pendingInput + "\n")
       root.pendingInput = ""
       if (root.operation === "service-query") root.serviceObjective = ""
+      if (root.operation === "service-publication" && root.publicationOperation === "publish")
+        root.publicationPolicyAccepted = false
     }
     stdout: StdioCollector {
       waitForEnd: true
@@ -233,6 +353,7 @@ Item {
       else root.errorText = root.commandError !== "" ? root.commandError : "The local runtime is unavailable."
       root.pendingInput = ""
       root.operation = ""
+      root.publicationOperation = ""
     }
   }
 

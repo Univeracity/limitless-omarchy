@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -16,10 +17,13 @@ from .provider import serve_general_provider
 from .service import (
     activate_managed_service,
     inspect_managed_service,
+    manage_publication,
     query_managed_service,
 )
 
 MAX_SERVICE_INPUT_BYTES = 8 * 1024
+_REASON_CODE = re.compile(r"^[a-z][a-z0-9-]{0,79}$")
+_DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 def _print(value: dict[str, Any]) -> None:
@@ -49,6 +53,81 @@ def _service_query_input() -> tuple[str, str | None]:
     if token is not None and (not isinstance(token, str) or len(token) > 4096):
         raise AdapterError("service access token is invalid")
     return objective, token
+
+
+def _service_publication_input() -> dict[str, Any]:
+    raw = sys.stdin.buffer.readline(MAX_SERVICE_INPUT_BYTES + 1)
+    if not raw or len(raw) > MAX_SERVICE_INPUT_BYTES or not raw.endswith(b"\n"):
+        raise AdapterError("publication input must be one bounded JSON line on stdin")
+    try:
+        value = strict_json_loads(raw.decode("utf-8"))
+    except (UnicodeError, ValueError) as error:
+        raise AdapterError("publication input is invalid") from error
+    if not isinstance(value, dict) or set(value) != {
+        "schemaVersion",
+        "operation",
+        "draftPath",
+        "statePath",
+        "acceptedPublicationPolicyDigest",
+        "reasonCode",
+    }:
+        raise AdapterError("publication input has an unsupported shape")
+    if value["schemaVersion"] != "limitless.omarchy-publication-input/0.1":
+        raise AdapterError("publication input schemaVersion is invalid")
+    operation = value["operation"]
+    if operation not in {"publish", "status", "revoke"}:
+        raise AdapterError("publication operation is invalid")
+    paths: dict[str, Path | None] = {}
+    for field in ("draftPath", "statePath"):
+        configured = value[field]
+        if configured is None:
+            paths[field] = None
+            continue
+        if (
+            not isinstance(configured, str)
+            or not configured
+            or len(configured) > 4096
+            or "\x00" in configured
+            or not Path(configured).is_absolute()
+            or ".." in Path(configured).parts
+        ):
+            raise AdapterError("publication path is invalid")
+        paths[field] = Path(configured)
+    accepted_digest = value["acceptedPublicationPolicyDigest"]
+    reason = value["reasonCode"]
+    if accepted_digest is not None and (
+        not isinstance(accepted_digest, str) or _DIGEST.fullmatch(accepted_digest) is None
+    ):
+        raise AdapterError("accepted publication policy digest is invalid")
+    if reason is not None and (not isinstance(reason, str) or _REASON_CODE.fullmatch(reason) is None):
+        raise AdapterError("publication withdrawal reason is invalid")
+    if operation == "publish":
+        valid = (
+            paths["draftPath"] is not None
+            and paths["statePath"] is None
+            and reason is None
+            and accepted_digest is not None
+        )
+    elif operation == "status":
+        valid = (
+            paths["draftPath"] is None and paths["statePath"] is not None and reason is None and accepted_digest is None
+        )
+    else:
+        valid = (
+            paths["draftPath"] is None
+            and paths["statePath"] is not None
+            and reason is not None
+            and accepted_digest is None
+        )
+    if not valid:
+        raise AdapterError("publication input is invalid")
+    return {
+        "operation": operation,
+        "draft_path": paths["draftPath"],
+        "state_path": paths["statePath"],
+        "accepted_publication_policy_digest": accepted_digest,
+        "reason_code": reason,
+    }
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -109,6 +188,10 @@ def _parser() -> argparse.ArgumentParser:
     )
     service_query.add_argument("--omarchy-release")
     service_query.add_argument("--request-id")
+    subparsers.add_parser(
+        "service-publication",
+        help="publish, inspect, or withdraw one explicitly selected contribution",
+    )
     return parser
 
 
@@ -153,6 +236,8 @@ def main() -> None:
                     request_id=args.request_id,
                 )
             )
+        elif args.command == "service-publication":
+            _print(manage_publication(**_service_publication_input()))
     except AdapterError as error:
         print(f"limitless-omarchy: {error}", file=sys.stderr)
         raise SystemExit(2) from error

@@ -21,6 +21,12 @@ from limitless_library.official_service import (
     activated_service_connector,
     activated_service_profile,
 )
+from limitless_library.publication import (
+    PublicationError,
+    publication_status,
+    publish_draft,
+    revoke_publication,
+)
 from limitless_library.service_connector import (
     ServiceConnector,
     ServiceConnectorError,
@@ -28,12 +34,18 @@ from limitless_library.service_connector import (
     ServiceUnavailableError,
     VerifiedService,
 )
+from limitless_library.service_identity import (
+    ServiceIdentityError,
+    installation_publisher_authority,
+)
 
 from .adapter import AdapterError, Runner, _default_runner, discover_profile
 
 ConnectorFactory = Callable[[ServiceProfile], ServiceConnector]
 
 _NUMERIC_RELEASE = re.compile(r"^[0-9]+(?:\.[0-9]+){0,3}$")
+_DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
+_REASON_CODE = re.compile(r"^[a-z][a-z0-9-]{0,79}$")
 
 
 def _service_connector(
@@ -99,6 +111,7 @@ def _service_status(
         "mode": "managed-service-ready",
         "service": connector.profile.public_summary(),
         "policy": discovery["dataUsePolicy"],
+        "publicationPolicy": discovery.get("publicationPolicy"),
         "resultVersions": discovery["resultVersions"],
         "expiresAt": discovery["expiresAt"],
     }
@@ -243,3 +256,91 @@ def query_managed_service(
         query=query,
         decision=decision,
     )
+
+
+def manage_publication(
+    *,
+    operation: str,
+    draft_path: Path | None,
+    state_path: Path | None,
+    accepted_publication_policy_digest: str | None,
+    reason_code: str | None,
+) -> dict[str, Any]:
+    """Run one explicit publisher action through anonymous installation authority."""
+
+    if operation not in {"publish", "status", "revoke"}:
+        raise AdapterError("publication operation is invalid")
+    for selected in (draft_path, state_path):
+        if selected is not None and (
+            not isinstance(selected, Path) or not selected.is_absolute() or ".." in selected.parts
+        ):
+            raise AdapterError("publication path is invalid")
+    if operation == "publish":
+        if (
+            draft_path is None
+            or state_path is not None
+            or reason_code is not None
+            or not isinstance(accepted_publication_policy_digest, str)
+            or _DIGEST.fullmatch(accepted_publication_policy_digest) is None
+        ):
+            raise AdapterError("publication input is invalid")
+    elif (
+        draft_path is not None
+        or state_path is None
+        or accepted_publication_policy_digest is not None
+        or operation == "status"
+        and reason_code is not None
+    ):
+        raise AdapterError("publication input is invalid")
+    if operation == "revoke" and (not isinstance(reason_code, str) or _REASON_CODE.fullmatch(reason_code) is None):
+        raise AdapterError("publication withdrawal reason is invalid")
+
+    try:
+        connector = activated_service_connector()
+        signer, publisher = installation_publisher_authority(
+            service_id=connector.profile.service_id,
+        )
+        if operation == "publish":
+            result = publish_draft(
+                connector,
+                draft_path=draft_path,
+                state_path=None,
+                signer=signer,
+                publisher=publisher,
+                accepted_publication_policy_digest=accepted_publication_policy_digest,
+            )
+        elif operation == "status":
+            result = publication_status(
+                connector,
+                state_path=state_path,
+                signer=signer,
+                publisher=publisher,
+            )
+        else:
+            result = revoke_publication(
+                connector,
+                state_path=state_path,
+                signer=signer,
+                publisher=publisher,
+                reason_code=reason_code,
+            )
+    except (
+        OfficialServiceActivationError,
+        PublicationError,
+        ServiceConnectorError,
+        ServiceIdentityError,
+        OSError,
+        ValueError,
+    ) as error:
+        raise AdapterError("managed publication could not be completed safely") from error
+
+    return {
+        "schemaVersion": "limitless.omarchy-publication-result/0.1",
+        "operation": operation,
+        "submissionRef": result["submissionRef"],
+        "admissionState": result["admissionState"],
+        "releaseRef": result.get("releaseRef"),
+        "reasonCodes": result.get("reasonCodes", []),
+        "uploadedObjectCount": len(result.get("uploadedObjects", [])),
+        "statePath": result["statePath"],
+    }

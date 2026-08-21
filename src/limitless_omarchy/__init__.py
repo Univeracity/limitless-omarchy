@@ -13,6 +13,7 @@ from .mcp_server import handle_message
 from .service import (
     build_service_receiver_context,
     inspect_managed_service,
+    manage_publication,
     query_managed_service,
 )
 
@@ -23,6 +24,7 @@ __all__ = [
     "discover_profile",
     "handle_message",
     "inspect_managed_service",
+    "manage_publication",
     "query_local_catalog",
     "query_managed_service",
     "seal_local_capsule",

@@ -33,7 +33,7 @@ def test_package_pins_a_public_limitless_library_revision() -> None:
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
     assert "limitless-library @ git+https://github.com/univeracity/limitlesslibrary.git@" in project
-    assert "0a400fd27eac71fceb900c09efef784acb8a2f75" in project
+    assert "641adc83b2eacb9d87d30468ead9ed921cca1e72" in project
 
 
 def test_cli_keeps_local_queries_bounded_to_omarchy_private_reuse() -> None:
@@ -57,6 +57,11 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "function activateService()" in panel
     assert "function inspectService()" in panel
     assert "function queryService()" in panel
+    assert "function publishContribution()" in panel
+    assert "function inspectPublication()" in panel
+    assert "function withdrawPublication()" in panel
+    assert "function runPublication(" in panel
+    assert "function openPublicationPolicy()" in panel
     assert "stdinEnabled: true" in panel
     assert "command.write(root.pendingInput" in panel
     assert 'root.serviceObjective = ""' in panel
@@ -69,6 +74,12 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "Enable official service" in contents
     assert "Inspect trust boundary" in contents
     assert "Query managed service" in contents
+    assert "Share a reviewed contribution (optional)" in contents
+    assert "Limitless does not scan the workspace" in contents
+    assert "Open verified public publication policy" in contents
+    assert "Publish explicitly selected draft" in contents
+    assert "Check contribution status" in contents
+    assert "Confirm withdrawal" in contents
     assert "profile file, or API key" in contents
     assert "serviceProfilePath" not in panel + contents
     assert "serviceAccessToken" not in panel + contents
@@ -101,6 +112,7 @@ def test_panel_runtime_is_syntax_valid_and_never_targets_system_python() -> None
     assert "service-inspect" in text
     assert "service-query" in text
     assert "service-activate" in text
+    assert "service-publication" in text
     assert "--objective" not in text
     assert "LIMITLESS_SERVICE_TOKEN" not in text
 
@@ -123,6 +135,53 @@ def test_panel_runtime_reports_setup_required_without_writing_to_the_system_pyth
         "service": {"connected": False, "reason": "local-runtime-not-installed"},
     }
     assert not (tmp_path / "xdg-data").exists()
+
+
+def test_panel_runtime_forwards_publication_only_over_stdin(tmp_path: Path) -> None:
+    runtime = ROOT / "scripts" / "limitless-omarchy-runtime"
+    data_home = tmp_path / "xdg-data"
+    runtime_bin = data_home / "limitless-omarchy" / "runtime" / "bin"
+    runtime_bin.mkdir(parents=True)
+    captured_arguments = tmp_path / "arguments.txt"
+    captured_input = tmp_path / "input.json"
+    _mock_command(
+        runtime_bin,
+        "limitless-omarchy",
+        """#!/bin/sh
+printf '%s\n' "$*" > "$CAPTURED_ARGUMENTS"
+IFS= read -r line
+printf '%s\n' "$line" > "$CAPTURED_INPUT"
+printf '%s\n' '{"schemaVersion":"limitless.omarchy-publication-result/0.1","operation":"publish"}'
+""",
+    )
+    payload = {
+        "schemaVersion": "limitless.omarchy-publication-input/0.1",
+        "operation": "publish",
+        "draftPath": "/home/user/reviewed/publication.json",
+        "statePath": None,
+        "acceptedPublicationPolicyDigest": "sha256:" + "3" * 64,
+        "reasonCode": None,
+    }
+    environment = {
+        **os.environ,
+        "XDG_DATA_HOME": str(data_home),
+        "CAPTURED_ARGUMENTS": str(captured_arguments),
+        "CAPTURED_INPUT": str(captured_input),
+    }
+
+    completed = subprocess.run(
+        [str(runtime), "service-publication", "--plugin-root", str(ROOT)],
+        input=json.dumps(payload) + "\n",
+        check=True,
+        capture_output=True,
+        text=True,
+        env=environment,
+    )
+
+    assert captured_arguments.read_text(encoding="utf-8").strip() == "service-publication"
+    assert json.loads(captured_input.read_text(encoding="utf-8")) == payload
+    assert "/home/user/reviewed" not in captured_arguments.read_text(encoding="utf-8")
+    assert json.loads(completed.stdout)["operation"] == "publish"
 
 
 def test_runtime_smoke_harness_is_syntax_valid_and_non_mutating() -> None:

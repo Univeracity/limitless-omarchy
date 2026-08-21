@@ -31,13 +31,14 @@ from limitless_omarchy.adapter import (
     status,
     validate_plugin,
 )
-from limitless_omarchy.cli import _service_query_input
+from limitless_omarchy.cli import _service_publication_input, _service_query_input
 from limitless_omarchy.mcp_server import TOOL_NAME, handle_message
 from limitless_omarchy.provider import general_provider_command
 from limitless_omarchy.service import (
     activate_managed_service,
     build_service_receiver_context,
     inspect_managed_service,
+    manage_publication,
     query_managed_service,
 )
 
@@ -105,6 +106,11 @@ class FakeServiceConnector:
                 "dataUsePolicy": {
                     "url": "https://example.com/policy",
                     "digest": "sha256:" + "1" * 64,
+                },
+                "publicationPolicy": {
+                    "url": "https://example.com/publication-policy",
+                    "revision": "publication-2026-08",
+                    "digest": "sha256:" + "3" * 64,
                 },
                 "resultVersions": ["limitless.service-query-result/1.1"],
                 "expiresAt": "2026-08-21T00:00:00Z",
@@ -204,6 +210,7 @@ def test_service_inspection_verifies_profile_without_a_query(tmp_path: Path) -> 
     assert result["mode"] == "managed-service-ready"
     assert result["service"]["serviceId"] == "service:example"
     assert result["policy"]["digest"] == "sha256:" + "1" * 64
+    assert result["publicationPolicy"]["digest"] == "sha256:" + "3" * 64
 
 
 def test_service_activation_is_one_action_and_persists_no_credential(
@@ -322,6 +329,126 @@ def test_service_cli_reads_objective_and_token_only_from_bounded_stdin(
         "Find a reviewed focus customization.",
         "test-access-token-value",
     )
+
+
+@pytest.mark.parametrize(
+    ("operation", "draft", "state", "accepted_digest", "reason"),
+    [
+        ("publish", "/tmp/reviewed-publication.json", None, "sha256:" + "3" * 64, None),
+        ("status", None, "/tmp/reviewed-publication.json.state.json", None, None),
+        (
+            "revoke",
+            None,
+            "/tmp/reviewed-publication.json.state.json",
+            None,
+            "publisher-withdrawal",
+        ),
+    ],
+)
+def test_service_publication_cli_accepts_only_explicit_bounded_paths(
+    monkeypatch: pytest.MonkeyPatch,
+    operation: str,
+    draft: str | None,
+    state: str | None,
+    accepted_digest: str | None,
+    reason: str | None,
+) -> None:
+    payload = {
+        "schemaVersion": "limitless.omarchy-publication-input/0.1",
+        "operation": operation,
+        "draftPath": draft,
+        "statePath": state,
+        "acceptedPublicationPolicyDigest": accepted_digest,
+        "reasonCode": reason,
+    }
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        SimpleNamespace(buffer=BytesIO((json.dumps(payload) + "\n").encode("utf-8"))),
+    )
+
+    result = _service_publication_input()
+
+    assert result["operation"] == operation
+    assert result["draft_path"] == (None if draft is None else Path(draft))
+    assert result["state_path"] == (None if state is None else Path(state))
+    assert result["accepted_publication_policy_digest"] == accepted_digest
+    assert result["reason_code"] == reason
+
+
+def test_service_publication_cli_rejects_relative_or_unaccepted_input(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "schemaVersion": "limitless.omarchy-publication-input/0.1",
+        "operation": "publish",
+        "draftPath": "publication.json",
+        "statePath": None,
+        "acceptedPublicationPolicyDigest": None,
+        "reasonCode": None,
+    }
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        SimpleNamespace(buffer=BytesIO((json.dumps(payload) + "\n").encode("utf-8"))),
+    )
+
+    with pytest.raises(AdapterError, match="path is invalid"):
+        _service_publication_input()
+
+
+def test_managed_publication_uses_current_anonymous_authority_and_projects_result(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    connector = SimpleNamespace(profile=SimpleNamespace(service_id="service:example"))
+    signer = object()
+    publisher = {"publisherId": "installation:example"}
+    draft = tmp_path / "publication.json"
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(service_module, "activated_service_connector", lambda: connector)
+    monkeypatch.setattr(
+        service_module,
+        "installation_publisher_authority",
+        lambda *, service_id: (signer, publisher),
+    )
+    monkeypatch.setattr(
+        service_module,
+        "publish_draft",
+        lambda selected, **values: (
+            calls.append({"connector": selected, **values})
+            or {
+                "submissionRef": "public-submission:example",
+                "admissionState": "pending",
+                "uploadedObjects": [{"digest": "sha256:" + "1" * 64}],
+                "statePath": str(draft) + ".state.json",
+            }
+        ),
+    )
+
+    result = manage_publication(
+        operation="publish",
+        draft_path=draft,
+        state_path=None,
+        accepted_publication_policy_digest="sha256:" + "3" * 64,
+        reason_code=None,
+    )
+
+    assert calls[0]["connector"] is connector
+    assert calls[0]["signer"] is signer
+    assert calls[0]["publisher"] is publisher
+    assert calls[0]["draft_path"] == draft
+    assert calls[0]["accepted_publication_policy_digest"] == "sha256:" + "3" * 64
+    assert result == {
+        "schemaVersion": "limitless.omarchy-publication-result/0.1",
+        "operation": "publish",
+        "submissionRef": "public-submission:example",
+        "admissionState": "pending",
+        "releaseRef": None,
+        "reasonCodes": [],
+        "uploadedObjectCount": 1,
+        "statePath": str(draft) + ".state.json",
+    }
 
 
 def test_query_returns_source_free_method_for_eligible_catalog(tmp_path: Path) -> None:

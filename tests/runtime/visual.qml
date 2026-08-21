@@ -16,6 +16,10 @@ ShellRoot {
     property bool runtimeReady: true
     property bool serviceExpanded: true
     property bool serviceReady: true
+    property bool publicationExpanded: true
+    property bool publicationPolicyAccepted: false
+    property bool publicationPolicyReady: true
+    property bool publicationWithdrawalArmed: false
     property string headline: "Local Library ready"
     property string detail: "Local reuse remains available. Service discovery is an explicit opt-in."
     property string selectionReference: ""
@@ -25,6 +29,12 @@ ShellRoot {
     property string serviceObjective: "Find a recent customization that improves workspace focus"
     property string omarchyRelease: "2026.08"
     property string serviceSummary: "Pinned service · private · local-only · accepted policy"
+    property string publicationDraftPath: "/home/user/reviewed/publication.draft.json"
+    property string publicationStatePath: "/home/user/reviewed/publication.draft.json.state.json"
+    property string publicationSummary: "No public contribution has been submitted."
+    property string publicationPolicyUrl: "https://limitlesslibrary.com/publication-policy"
+    property string publicationPolicyDigest: "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    property string publicationPolicySummary: "publication-2026-08 · sha256:3333333333333333333333333333333333333333333333333333333333333333"
 
     function installRuntime() {}
     function queryExample() {}
@@ -32,6 +42,10 @@ ShellRoot {
     function activateService() {}
     function inspectService() {}
     function queryService() {}
+    function publishContribution() {}
+    function inspectPublication() {}
+    function withdrawPublication() {}
+    function openPublicationPolicy() {}
   }
 
   FileView {

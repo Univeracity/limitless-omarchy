@@ -349,7 +349,209 @@ Item {
       opacity: root.panel && root.panel.serviceReady ? 0.85 : 0.6
       font.family: Style.font.family
       font.pixelSize: Style.font.caption
+    }
+
+    Rectangle {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+      width: 440
+      height: 1
+      color: Color.popups.border
+      opacity: 0.65
+    }
+
+    Button {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+      width: 440
+      height: Math.max(34, Style.spacing.controlHeight)
+      text: root.panel && root.panel.publicationExpanded
+        ? "Hide contribution controls"
+        : "Share a reviewed contribution (optional)"
+      bordered: true
+      focusable: true
+      enabled: root.panel && root.panel.serviceReady && !root.commandRunning
+      onClicked: if (root.panel) root.panel.publicationExpanded = !root.panel.publicationExpanded
+    }
+
+    Text {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+        && root.panel.publicationExpanded
+      width: 440
+      wrapMode: Text.Wrap
+      text: "Publishing is public and optional. Select one reviewed draft whose object list explicitly names every file to consider. Limitless does not scan the workspace. Review the policy digest above before accepting it for this submission."
+      color: Color.popups.text
+      opacity: 0.7
+      font.family: Style.font.family
+      font.pixelSize: Style.font.bodySmall
+    }
+
+    Rectangle {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+        && root.panel.publicationExpanded
+      width: 440
+      height: Math.max(34, Style.spacing.controlHeight)
+      radius: Style.cornerRadius
+      color: Color.popups.background
+      border.color: publicationDraftInput.activeFocus ? Color.accent : Color.popups.border
+      border.width: 1
+
+      TextInput {
+        id: publicationDraftInput
+        anchors.fill: parent
+        anchors.leftMargin: 10
+        anchors.rightMargin: 10
+        verticalAlignment: TextInput.AlignVCenter
+        clip: true
+        text: root.panel ? root.panel.publicationDraftPath : ""
+        color: Color.popups.text
+        font.family: Style.font.family
+        font.pixelSize: Style.font.bodySmall
+        selectByMouse: true
+        onTextEdited: if (root.panel) root.panel.publicationDraftPath = text
+
+        Text {
+          anchors.fill: parent
+          verticalAlignment: Text.AlignVCenter
+          visible: publicationDraftInput.text === ""
+          text: "/absolute/path/to/publication.draft.json"
+          color: Color.popups.text
+          opacity: 0.45
+          font: publicationDraftInput.font
+        }
       }
     }
+
+    Text {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+        && root.panel.publicationExpanded
+      width: 440
+      wrapMode: Text.WrapAnywhere
+      text: root.panel ? root.panel.publicationPolicySummary : ""
+      color: root.panel && root.panel.publicationPolicyReady ? Color.accent : Color.popups.text
+      opacity: root.panel && root.panel.publicationPolicyReady ? 0.8 : 0.6
+      font.family: Style.font.family
+      font.pixelSize: Style.font.caption
+    }
+
+    Button {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+        && root.panel.publicationExpanded
+      width: 440
+      height: Math.max(34, Style.spacing.controlHeight)
+      text: "Open verified public publication policy"
+      bordered: true
+      focusable: true
+      enabled: root.panel && root.panel.publicationPolicyReady && !root.commandRunning
+      onClicked: if (root.panel) root.panel.openPublicationPolicy()
+    }
+
+    Button {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+        && root.panel.publicationExpanded
+      width: 440
+      height: Math.max(34, Style.spacing.controlHeight)
+      text: root.panel && root.panel.publicationPolicyAccepted
+        ? "✓ Current public publication policy accepted once"
+        : "Review, then accept current publication policy"
+      bordered: true
+      focusable: true
+      enabled: root.panel && root.panel.serviceReady && root.panel.publicationPolicyReady
+        && !root.commandRunning
+      onClicked: if (root.panel)
+        root.panel.publicationPolicyAccepted = !root.panel.publicationPolicyAccepted
+    }
+
+    Button {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+        && root.panel.publicationExpanded
+      width: 440
+      height: Math.max(34, Style.spacing.controlHeight)
+      text: "Publish explicitly selected draft"
+      bordered: true
+      focusable: true
+      enabled: root.panel && root.panel.serviceReady
+        && root.panel.publicationPolicyReady && root.panel.publicationPolicyAccepted
+        && !root.commandRunning
+      onClicked: if (root.panel) root.panel.publishContribution()
+    }
+
+    Rectangle {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+        && root.panel.publicationExpanded
+      width: 440
+      height: Math.max(34, Style.spacing.controlHeight)
+      radius: Style.cornerRadius
+      color: Color.popups.background
+      border.color: publicationStateInput.activeFocus ? Color.accent : Color.popups.border
+      border.width: 1
+
+      TextInput {
+        id: publicationStateInput
+        anchors.fill: parent
+        anchors.leftMargin: 10
+        anchors.rightMargin: 10
+        verticalAlignment: TextInput.AlignVCenter
+        clip: true
+        text: root.panel ? root.panel.publicationStatePath : ""
+        color: Color.popups.text
+        font.family: Style.font.family
+        font.pixelSize: Style.font.bodySmall
+        selectByMouse: true
+        onTextEdited: if (root.panel) root.panel.publicationStatePath = text
+
+        Text {
+          anchors.fill: parent
+          verticalAlignment: Text.AlignVCenter
+          visible: publicationStateInput.text === ""
+          text: "Local state path for status or withdrawal"
+          color: Color.popups.text
+          opacity: 0.45
+          font: publicationStateInput.font
+        }
+      }
+    }
+
+    Row {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+        && root.panel.publicationExpanded
+      width: 440
+      spacing: 8
+
+      Button {
+        width: 216
+        height: Math.max(34, Style.spacing.controlHeight)
+        text: "Check contribution status"
+        bordered: true
+        focusable: true
+        enabled: root.panel && root.panel.serviceReady
+          && root.panel.publicationStatePath.trim() !== "" && !root.commandRunning
+        onClicked: if (root.panel) root.panel.inspectPublication()
+      }
+
+      Button {
+        width: 216
+        height: Math.max(34, Style.spacing.controlHeight)
+        text: root.panel && root.panel.publicationWithdrawalArmed
+          ? "Confirm withdrawal"
+          : "Withdraw active release"
+        bordered: true
+        focusable: true
+        enabled: root.panel && root.panel.serviceReady
+          && root.panel.publicationStatePath.trim() !== "" && !root.commandRunning
+        onClicked: if (root.panel) root.panel.withdrawPublication()
+      }
+    }
+
+    Text {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+        && root.panel.publicationExpanded
+      width: 440
+      wrapMode: Text.WrapAnywhere
+      text: root.panel ? root.panel.publicationSummary : ""
+      color: Color.popups.text
+      opacity: 0.65
+      font.family: Style.font.family
+      font.pixelSize: Style.font.caption
+    }
   }
+}
 }

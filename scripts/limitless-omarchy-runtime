@@ -30,6 +30,7 @@ Actions:
   service-activate enable the release-pinned official service
   service-inspect  verify the enabled official service
   service-query    read one managed query as a bounded JSON line from stdin
+  service-publication read one explicit publication action from bounded stdin
 
 The panel invokes this script itself. It is also intentionally usable as a
 lower-level diagnostic surface; it never installs into the system Python.
@@ -77,7 +78,7 @@ while (($#)); do
 done
 
 case "$action" in
-  status|setup|query|query-demo|service-activate|service-inspect|service-query) ;;
+  status|setup|query|query-demo|service-activate|service-inspect|service-query|service-publication) ;;
   *)
     fail "unrecognized action: $action"
     ;;
@@ -171,5 +172,9 @@ case "$action" in
     fi
     [[ -z $omarchy_release ]] || service_arguments+=(--omarchy-release "$omarchy_release")
     exec "$runtime_cli" "${service_arguments[@]}"
+    ;;
+  service-publication)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    exec "$runtime_cli" service-publication
     ;;
 esac
