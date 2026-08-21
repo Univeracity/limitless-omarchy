@@ -33,7 +33,7 @@ def test_package_pins_a_public_limitless_library_revision() -> None:
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
     assert "limitless-library @ git+https://github.com/univeracity/limitlesslibrary.git@" in project
-    assert "7600a0bbb92bac25c287ac99ab7d2cba6ede7fc3" in project
+    assert "a86d4dd8d9ee27bb62b3999a41e5fe137827856a" in project
 
 
 def test_cli_keeps_local_queries_bounded_to_omarchy_private_reuse() -> None:
