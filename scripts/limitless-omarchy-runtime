@@ -32,6 +32,7 @@ Actions:
   service-query    read one managed query as a bounded JSON line from stdin
   service-publication read one explicit publication action from bounded stdin
   service-artifact-stage redeem one exact-artifact continuation from bounded stdin
+  service-artifact-review materialize and validate one exact Omarchy bundle from bounded stdin
 
 The panel invokes this script itself. It is also intentionally usable as a
 lower-level diagnostic surface; it never installs into the system Python.
@@ -79,7 +80,7 @@ while (($#)); do
 done
 
 case "$action" in
-  status|setup|query|query-demo|service-activate|service-inspect|service-query|service-publication|service-artifact-stage) ;;
+  status|setup|query|query-demo|service-activate|service-inspect|service-query|service-publication|service-artifact-stage|service-artifact-review) ;;
   *)
     fail "unrecognized action: $action"
     ;;
@@ -181,5 +182,9 @@ case "$action" in
   service-artifact-stage)
     runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
     exec "$runtime_cli" service-artifact-stage
+    ;;
+  service-artifact-review)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    exec "$runtime_cli" service-artifact-review
     ;;
 esac

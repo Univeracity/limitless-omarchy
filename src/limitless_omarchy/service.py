@@ -11,9 +11,11 @@ import os
 import platform
 import re
 import secrets
+import shutil
 import stat
 from base64 import urlsafe_b64decode
 from collections.abc import Callable, Mapping
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -23,9 +25,17 @@ from limitless_library.contracts import (
     ContractError,
     canonical_json_bytes,
     load_json,
+    sha256_bytes,
     sha256_file,
     strict_json_loads,
     write_new_bytes,
+)
+from limitless_library.exact_file_bundle import (
+    EXACT_FILE_BUNDLE_SCHEMA_VERSION,
+    MAX_EXACT_FILE_BUNDLE_BYTES,
+    ExactFileBundle,
+    ExactFileBundleError,
+    parse_exact_file_bundle,
 )
 from limitless_library.official_service import (
     OfficialServiceActivationError,
@@ -53,7 +63,7 @@ from limitless_library.service_identity import (
     installation_publisher_authority,
 )
 
-from .adapter import AdapterError, Runner, _default_runner, discover_profile
+from .adapter import AdapterError, Runner, _default_runner, discover_profile, validate_plugin
 
 ConnectorFactory = Callable[[ServiceProfile], ServiceConnector]
 
@@ -63,6 +73,7 @@ _REASON_CODE = re.compile(r"^[a-z][a-z0-9-]{0,79}$")
 _SIGNATURE = re.compile(r"^[A-Za-z0-9_-]{86}$")
 _HANDOFF_STATE_SCHEMA_VERSION = "limitless.omarchy-artifact-handoff-state/0.1"
 _MAX_HANDOFF_STATE_BYTES = 64 * 1024
+_EXACT_BUNDLE_MEDIA_TYPE = "application/vnd.limitless.exact-file-bundle+json"
 
 
 def _service_connector(
@@ -539,6 +550,174 @@ def _private_staging_root(environ: Mapping[str, str] | None = None) -> Path:
     return root.resolve(strict=True)
 
 
+def _private_review_root(environ: Mapping[str, str] | None = None) -> Path:
+    root = _handoff_root(environ).parent / "receiver-reviews"
+    try:
+        root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        info = root.lstat()
+        if (
+            stat.S_ISLNK(info.st_mode)
+            or not stat.S_ISDIR(info.st_mode)
+            or os.name == "posix"
+            and (info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != 0o700)
+        ):
+            raise AdapterError("the managed receiver review directory is unsafe")
+    except AdapterError:
+        raise
+    except OSError as error:
+        raise AdapterError("the managed receiver review directory is unavailable") from error
+    return root.resolve(strict=True)
+
+
+def _review_inventory(bundle: ExactFileBundle, root: Path) -> list[dict[str, Any]]:
+    expected = {item.path: item for item in bundle.files}
+    actual: set[str] = set()
+    try:
+        root_info = root.lstat()
+        if (
+            stat.S_ISLNK(root_info.st_mode)
+            or not stat.S_ISDIR(root_info.st_mode)
+            or os.name == "posix"
+            and (root_info.st_uid != os.geteuid() or stat.S_IMODE(root_info.st_mode) != 0o700)
+        ):
+            raise AdapterError("the managed receiver review tree is unsafe")
+        for directory, directories, files in os.walk(root, followlinks=False):
+            current = Path(directory)
+            for name in directories:
+                info = (current / name).lstat()
+                if (
+                    stat.S_ISLNK(info.st_mode)
+                    or not stat.S_ISDIR(info.st_mode)
+                    or os.name == "posix"
+                    and (info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != 0o700)
+                ):
+                    raise AdapterError("the managed receiver review tree is unsafe")
+            for name in files:
+                path = current / name
+                relative = path.relative_to(root).as_posix()
+                item = expected.get(relative)
+                if item is None:
+                    raise AdapterError("the managed receiver review tree differs from its bundle")
+                descriptor = -1
+                try:
+                    descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+                    info = os.fstat(descriptor)
+                    hasher = sha256()
+                    total = 0
+                    while True:
+                        chunk = os.read(descriptor, 128 * 1024)
+                        if not chunk:
+                            break
+                        total += len(chunk)
+                        if total > item.byte_length:
+                            raise AdapterError("the managed receiver review tree differs from its bundle")
+                        hasher.update(chunk)
+                    if (
+                        not stat.S_ISREG(info.st_mode)
+                        or os.name == "posix"
+                        and (info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != int(item.mode, 8))
+                        or total != item.byte_length
+                        or os.fstat(descriptor).st_size != item.byte_length
+                        or "sha256:" + hasher.hexdigest() != item.content_digest
+                    ):
+                        raise AdapterError("the managed receiver review tree differs from its bundle")
+                finally:
+                    if descriptor >= 0:
+                        os.close(descriptor)
+                actual.add(relative)
+    except AdapterError:
+        raise
+    except OSError as error:
+        raise AdapterError("the managed receiver review tree is unavailable") from error
+    if actual != set(expected):
+        raise AdapterError("the managed receiver review tree differs from its bundle")
+    return [
+        {
+            "path": item.path,
+            "mode": item.mode,
+            "byteLength": item.byte_length,
+            "contentDigest": item.content_digest,
+        }
+        for item in bundle.files
+    ]
+
+
+def _materialize_review_bundle(
+    bundle: ExactFileBundle,
+    *,
+    digest: str,
+    environ: Mapping[str, str] | None = None,
+) -> tuple[Path, list[dict[str, Any]]]:
+    root = _private_review_root(environ)
+    destination = root / digest.removeprefix("sha256:")
+    created = False
+    try:
+        if destination.exists() or destination.is_symlink():
+            inventory = _review_inventory(bundle, destination)
+            return destination.resolve(strict=True), inventory
+        destination.mkdir(mode=0o700)
+        created = True
+        for item in bundle.files:
+            path = destination.joinpath(*item.path.split("/"))
+            path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            for parent in path.parents:
+                if parent == destination.parent:
+                    break
+                parent.chmod(0o700)
+            write_new_bytes(path, item.data, mode=int(item.mode, 8))
+        inventory = _review_inventory(bundle, destination)
+        return destination.resolve(strict=True), inventory
+    except (AdapterError, ContractError, OSError, ValueError) as error:
+        if created:
+            shutil.rmtree(destination, ignore_errors=True)
+        if isinstance(error, AdapterError):
+            raise
+        raise AdapterError("managed exact bundle could not be materialized safely") from error
+
+
+def _read_private_staged_bundle(path: Path, *, digest: str, byte_length: int) -> bytes:
+    """Read one staged bundle through a no-follow descriptor and reverify it."""
+
+    if (
+        not isinstance(byte_length, int)
+        or isinstance(byte_length, bool)
+        or not 1 <= byte_length <= MAX_EXACT_FILE_BUNDLE_BYTES
+    ):
+        raise AdapterError("the staged exact bundle length is invalid")
+    descriptor = -1
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+        info = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or os.name == "posix"
+            and (info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != 0o600)
+            or info.st_size != byte_length
+        ):
+            raise AdapterError("the staged exact bundle is unsafe")
+        chunks: list[bytes] = []
+        remaining = byte_length
+        while remaining:
+            chunk = os.read(descriptor, min(remaining, 1024 * 1024))
+            if not chunk:
+                raise AdapterError("the staged exact bundle changed while reading")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(descriptor, 1) or os.fstat(descriptor).st_size != byte_length:
+            raise AdapterError("the staged exact bundle changed while reading")
+        payload = b"".join(chunks)
+        if sha256_bytes(payload) != digest:
+            raise AdapterError("the staged exact bundle digest is invalid")
+        return payload
+    except AdapterError:
+        raise
+    except OSError as error:
+        raise AdapterError("the staged exact bundle is unavailable") from error
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+
+
 def stage_managed_artifact(
     state_path: Path,
     *,
@@ -579,10 +758,17 @@ def stage_managed_artifact(
                 or os.name == "posix"
                 and stat.S_IMODE(info.st_mode) != 0o600
                 or sha256_file(destination) != immutable["digest"]
+                or isinstance(immutable.get("byteLength"), int)
+                and info.st_size != immutable["byteLength"]
             ):
                 raise AdapterError("the existing managed artifact staging file is unsafe")
             staged = {
-                "schemaVersion": "limitless.staged-service-artifact/1.0",
+                "schemaVersion": (
+                    "limitless.staged-service-artifact/1.1"
+                    if immutable.get("format") == EXACT_FILE_BUNDLE_SCHEMA_VERSION
+                    and immutable.get("mediaType") == _EXACT_BUNDLE_MEDIA_TYPE
+                    else "limitless.staged-service-artifact/1.0"
+                ),
                 "decisionRef": result["decisionRef"],
                 "capabilityId": result["selection"]["capabilityId"],
                 "revision": immutable["revision"],
@@ -590,6 +776,15 @@ def stage_managed_artifact(
                 "byteLength": info.st_size,
                 "path": str(destination),
                 "nextAction": result["nextAction"],
+                **(
+                    {
+                        "format": immutable["format"],
+                        "mediaType": immutable["mediaType"],
+                    }
+                    if immutable.get("format") == EXACT_FILE_BUNDLE_SCHEMA_VERSION
+                    and immutable.get("mediaType") == _EXACT_BUNDLE_MEDIA_TYPE
+                    else {}
+                ),
             }
         else:
             staged = connector.fetch_selected_artifact_continuation(
@@ -618,6 +813,63 @@ def stage_managed_artifact(
         "path": staged["path"],
         "nextAction": staged["nextAction"],
         "handoffStatePath": str(selected_state),
+        "nativeInstallationRequired": True,
+        **(
+            {
+                "format": staged["format"],
+                "mediaType": staged["mediaType"],
+            }
+            if staged.get("schemaVersion") == "limitless.staged-service-artifact/1.1"
+            else {}
+        ),
+    }
+
+
+def prepare_managed_plugin_review(
+    state_path: Path,
+    *,
+    runner: Runner = _default_runner,
+    environ: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Stage, materialize, and natively validate one exact Omarchy bundle.
+
+    This is the explicit receiver adapter. It never invokes Omarchy's add,
+    enable, disable, or remove operations; installation remains a separate
+    owner-controlled native action after review.
+    """
+
+    staged = stage_managed_artifact(state_path, environ=environ)
+    if staged.get("format") != EXACT_FILE_BUNDLE_SCHEMA_VERSION or staged.get("mediaType") != _EXACT_BUNDLE_MEDIA_TYPE:
+        raise AdapterError("managed artifact is not an exact file bundle")
+    bundle_path = Path(staged["path"])
+    try:
+        payload = _read_private_staged_bundle(
+            bundle_path,
+            digest=staged["digest"],
+            byte_length=staged["byteLength"],
+        )
+        bundle = parse_exact_file_bundle(payload)
+        review_path, inventory = _materialize_review_bundle(
+            bundle,
+            digest=staged["digest"],
+            environ=environ,
+        )
+        native_validation = validate_plugin(review_path, runner=runner)
+    except AdapterError:
+        raise
+    except (ExactFileBundleError, OSError, ValueError) as error:
+        raise AdapterError("managed exact bundle review failed closed") from error
+    return {
+        "schemaVersion": "limitless.omarchy-artifact-review-result/0.1",
+        "decisionRef": staged["decisionRef"],
+        "capabilityId": staged["capabilityId"],
+        "revision": staged["revision"],
+        "digest": staged["digest"],
+        "bundlePath": staged["path"],
+        "reviewPath": str(review_path),
+        "files": inventory,
+        "nativeValidation": native_validation,
+        "installationDisposition": "not-installed",
         "nativeInstallationRequired": True,
     }
 

@@ -23,6 +23,8 @@ Item {
   property string serviceArtifactHandoffStatePath: ""
   property string serviceArtifactStagedPath: ""
   property bool serviceArtifactStageAvailable: false
+  property string serviceArtifactReviewPath: ""
+  property bool serviceArtifactReviewAvailable: false
   property bool publicationExpanded: false
   property string publicationDraftPath: ""
   property string publicationStatePath: ""
@@ -58,6 +60,8 @@ Item {
     serviceArtifactHandoffStatePath = ""
     serviceArtifactStagedPath = ""
     serviceArtifactStageAvailable = false
+    serviceArtifactReviewPath = ""
+    serviceArtifactReviewAvailable = false
     publicationPolicyAccepted = false
     publicationPolicyReady = false
     publicationPolicyUrl = ""
@@ -136,6 +140,18 @@ Item {
       handoffStatePath: serviceArtifactHandoffStatePath
     })
     runRuntime("service-artifact-stage", [], input)
+  }
+
+  function prepareServiceArtifactReview() {
+    if (!serviceArtifactReviewAvailable || !serviceArtifactHandoffStatePath.startsWith("/")) {
+      errorText = "No locally bound exact Omarchy bundle is available."
+      return
+    }
+    var input = JSON.stringify({
+      schemaVersion: "limitless.omarchy-artifact-review-input/0.1",
+      handoffStatePath: serviceArtifactHandoffStatePath
+    })
+    runRuntime("service-artifact-review", [], input)
   }
 
   function publishContribution() {
@@ -275,7 +291,9 @@ Item {
       serviceArtifactHandoffStatePath = String(value.handoffStatePath || "")
       serviceArtifactStageAvailable = disposition === "exact-component"
         && serviceArtifactHandoffStatePath.startsWith("/")
+      serviceArtifactReviewAvailable = serviceArtifactStageAvailable
       serviceArtifactStagedPath = ""
+      serviceArtifactReviewPath = ""
       selectionReference = serviceSelection && serviceSelection.title
         ? String(serviceSelection.title)
         : String(value.requestDigest || "")
@@ -312,6 +330,26 @@ Item {
       headline = "Verified component staged"
       detail = "Exact bytes were fetched with the locally bound continuation and verified before owner-only staging. No installation or enablement occurred."
       serviceSummary = "Receiver-native review and installation are still required."
+      return
+    }
+    if (value.schemaVersion === "limitless.omarchy-artifact-review-result/0.1") {
+      runtimeReady = true
+      disposition = "exact-component"
+      serviceArtifactStageAvailable = false
+      serviceArtifactReviewAvailable = false
+      serviceArtifactStagedPath = String(value.bundlePath || "")
+      serviceArtifactReviewPath = String(value.reviewPath || "")
+      selectionReference = String(value.digest || "")
+      var validation = value.nativeValidation || {}
+      if (String(validation.status || "invalid") === "valid") {
+        headline = "Verified plugin ready for review"
+        detail = "Exact bundle files were materialized without overwrite and passed Omarchy's native validator. No installation or enablement occurred."
+        serviceSummary = "Review the receiver-owned tree, then choose any native installation action separately."
+      } else {
+        headline = "Plugin requires review"
+        detail = "Exact bundle files were materialized without overwrite, but Omarchy's native validator did not accept the tree. Nothing was installed or enabled."
+        serviceSummary = String(validation.stderr || validation.stdout || "Native validation failed closed.")
+      }
       return
     }
     if (value.schemaVersion === "limitless.omarchy-publication-result/0.1") {

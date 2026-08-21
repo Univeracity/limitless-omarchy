@@ -28,6 +28,9 @@ If the installed release includes official service trust material, also confirm:
 4. A managed query clears the objective after dispatch.
 5. A signed selection, explicit abstention, or availability fallback is shown
    without changing the local catalog or enabling a plugin.
+6. For a format-aware exact selection, **Prepare verified plugin review**
+   displays an owner-only review tree and Omarchy's native validation result;
+   confirm that the plugin remains neither installed nor enabled.
 
 For lower-level, non-mutating validation of a checked-out repository, the
 optional companion smoke command remains available:

@@ -342,22 +342,26 @@ Item {
 
     Button {
       visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
-        && root.panel.serviceArtifactStageAvailable
+        && root.panel.serviceArtifactReviewAvailable
       width: 440
       height: Math.max(34, Style.spacing.controlHeight)
-      text: "Stage verified component for review"
+      text: "Prepare verified plugin review"
       bordered: true
       focusable: true
       enabled: root.panel && root.panel.serviceReady && !root.commandRunning
-      onClicked: if (root.panel) root.panel.stageServiceArtifact()
+      onClicked: if (root.panel) root.panel.prepareServiceArtifactReview()
     }
 
     Text {
       visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
-        && root.panel.serviceArtifactStagedPath !== ""
+        && (root.panel.serviceArtifactReviewPath !== "" || root.panel.serviceArtifactStagedPath !== "")
       width: 440
       wrapMode: Text.WrapAnywhere
-      text: root.panel ? "Staged: " + root.panel.serviceArtifactStagedPath : ""
+      text: root.panel
+        ? (root.panel.serviceArtifactReviewPath !== ""
+          ? "Review tree: " + root.panel.serviceArtifactReviewPath
+          : "Staged: " + root.panel.serviceArtifactStagedPath)
+        : ""
       color: Color.accent
       opacity: 0.75
       font.family: Style.font.family

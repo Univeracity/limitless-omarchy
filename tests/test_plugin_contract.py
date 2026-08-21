@@ -33,7 +33,7 @@ def test_package_pins_a_public_limitless_library_revision() -> None:
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
     assert "limitless-library @ git+https://github.com/univeracity/limitlesslibrary.git@" in project
-    assert "bfa9ecd43fe017ca5fe033edc845d182d803f382" in project
+    assert "7aece03bfbf68eb558e602de3bb50205593d8b52" in project
 
 
 def test_cli_keeps_local_queries_bounded_to_omarchy_private_reuse() -> None:
@@ -58,6 +58,7 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "function inspectService()" in panel
     assert "function queryService()" in panel
     assert "function stageServiceArtifact()" in panel
+    assert "function prepareServiceArtifactReview()" in panel
     assert "function publishContribution()" in panel
     assert "function inspectPublication()" in panel
     assert "function withdrawPublication()" in panel
@@ -75,7 +76,7 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "Enable official service" in contents
     assert "Inspect trust boundary" in contents
     assert "Query managed service" in contents
-    assert "Stage verified component for review" in contents
+    assert "Prepare verified plugin review" in contents
     assert "Share a reviewed contribution (optional)" in contents
     assert "Limitless does not scan the workspace" in contents
     assert "Open verified public publication policy" in contents
@@ -117,6 +118,7 @@ def test_panel_runtime_is_syntax_valid_and_never_targets_system_python() -> None
     assert "service-activate" in text
     assert "service-publication" in text
     assert "service-artifact-stage" in text
+    assert "service-artifact-review" in text
     assert "--objective" not in text
     assert "LIMITLESS_SERVICE_TOKEN" not in text
 

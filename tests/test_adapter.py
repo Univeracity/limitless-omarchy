@@ -14,6 +14,7 @@ import limitless_library
 import pytest
 from limitless_library.catalog import seal_capsule
 from limitless_library.contracts import load_json, write_new_bytes
+from limitless_library.exact_file_bundle import build_exact_file_bundle
 from limitless_library.mcp_protocol import modern_metadata
 from limitless_library.mcp_server import TOOL_NAME as GENERAL_TOOL_NAME
 from limitless_library.service_connector import (
@@ -34,6 +35,7 @@ from limitless_omarchy.adapter import (
     validate_plugin,
 )
 from limitless_omarchy.cli import (
+    _service_artifact_review_input,
     _service_artifact_stage_input,
     _service_publication_input,
     _service_query_input,
@@ -45,6 +47,7 @@ from limitless_omarchy.service import (
     build_service_receiver_context,
     inspect_managed_service,
     manage_publication,
+    prepare_managed_plugin_review,
     query_managed_service,
     stage_managed_artifact,
 )
@@ -154,7 +157,12 @@ class InvalidAuthorityConnector(FakeServiceConnector):
 
 
 class ArtifactContinuationConnector(FakeServiceConnector):
-    artifact = b"reviewed-omarchy-plugin-bundle"
+    artifact = build_exact_file_bundle(
+        {
+            "manifest.json": b'{"schemaVersion":1,"id":"example.reviewed-plugin"}\n',
+            "plugin.qml": b"import QtQuick\nItem {}\n",
+        }
+    )
 
     def fetch_selected_artifact_continuation(
         self,
@@ -167,12 +175,14 @@ class ArtifactContinuationConnector(FakeServiceConnector):
         write_new_bytes(destination, self.artifact)
         immutable = result["selection"]["immutable"]  # type: ignore[index]
         return {
-            "schemaVersion": "limitless.staged-service-artifact/1.0",
+            "schemaVersion": "limitless.staged-service-artifact/1.1",
             "decisionRef": result["decisionRef"],
             "capabilityId": result["selection"]["capabilityId"],  # type: ignore[index]
             "revision": immutable["revision"],
             "digest": immutable["digest"],
             "byteLength": len(self.artifact),
+            "format": "limitless.exact-file-bundle/1.0",
+            "mediaType": "application/vnd.limitless.exact-file-bundle+json",
             "path": str(destination),
             "nextAction": result["nextAction"],
         }
@@ -351,7 +361,7 @@ def test_exact_result_projects_no_delivery_secret_and_stages_from_signed_local_s
     artifact_digest = "sha256:" + sha256(connector.artifact).hexdigest()
     request_digest = "sha256:" + "3" * 64
     decision = {
-        "schemaVersion": "limitless.service-query-result/1.3",
+        "schemaVersion": "limitless.service-query-result/1.4",
         "requestDigest": request_digest,
         "decisionRef": "decision:omarchy-artifact-test",
         "treatment": "exact-component",
@@ -363,6 +373,9 @@ def test_exact_result_projects_no_delivery_secret_and_stages_from_signed_local_s
                 "kind": "artifact",
                 "revision": "1.0.0",
                 "digest": artifact_digest,
+                "byteLength": len(connector.artifact),
+                "format": "limitless.exact-file-bundle/1.0",
+                "mediaType": "application/vnd.limitless.exact-file-bundle+json",
                 "uri": "https://objects.example.test/v1/artifact",
                 "authorization": {
                     "header": "Limitless-Capability",
@@ -418,9 +431,40 @@ def test_exact_result_projects_no_delivery_secret_and_stages_from_signed_local_s
     assert "A" * 43 not in json.dumps(projected)
     assert "objects.example.test" not in json.dumps(projected)
     assert staged["nativeInstallationRequired"] is True
+    assert staged["format"] == "limitless.exact-file-bundle/1.0"
     assert Path(staged["path"]).read_bytes() == connector.artifact
     assert Path(staged["path"]).stat().st_mode & 0o777 == 0o600
     assert stage_managed_artifact(state, environ=environment) == staged
+
+    commands: list[tuple[str, ...]] = []
+
+    def native_validator(argv: object) -> subprocess.CompletedProcess[str]:
+        command = tuple(argv)  # type: ignore[arg-type]
+        commands.append(command)
+        return completed(stdout="plugin valid")
+
+    reviewed = prepare_managed_plugin_review(
+        state,
+        environ=environment,
+        runner=native_validator,
+    )
+    review_path = Path(reviewed["reviewPath"])
+    assert reviewed["installationDisposition"] == "not-installed"
+    assert reviewed["nativeValidation"]["status"] == "valid"
+    assert [item["path"] for item in reviewed["files"]] == ["manifest.json", "plugin.qml"]
+    assert (review_path / "manifest.json").is_file()
+    assert commands == [("omarchy", "plugin", "validate", str(review_path))]
+    assert not any(operation in " ".join(commands[0]) for operation in (" add ", " enable ", " remove "))
+
+    plugin_path = review_path / "plugin.qml"
+    plugin_path.unlink()
+    plugin_path.symlink_to(Path(environment["HOME"]) / "outside.qml")
+    with pytest.raises(AdapterError, match="review tree"):
+        prepare_managed_plugin_review(
+            state,
+            environ=environment,
+            runner=native_validator,
+        )
 
     renamed = state.with_name("5" * 64 + ".json")
     write_new_bytes(renamed, state.read_bytes())
@@ -543,6 +587,22 @@ def test_service_artifact_stage_cli_accepts_only_one_absolute_state_path(
     )
 
     assert _service_artifact_stage_input() == Path(payload["handoffStatePath"])
+
+
+def test_service_artifact_review_cli_accepts_only_one_absolute_state_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "schemaVersion": "limitless.omarchy-artifact-review-input/0.1",
+        "handoffStatePath": "/home/user/.local/state/limitless-omarchy/artifact-handoffs/" + "4" * 64 + ".json",
+    }
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        SimpleNamespace(buffer=BytesIO((json.dumps(payload) + "\n").encode("utf-8"))),
+    )
+
+    assert _service_artifact_review_input() == Path(payload["handoffStatePath"])
 
 
 def test_managed_publication_uses_current_anonymous_authority_and_projects_result(
