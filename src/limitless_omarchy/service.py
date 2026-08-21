@@ -46,9 +46,7 @@ def _service_connector(
             profile = activated_service_profile(access_token=access_token or None)
         else:
             if not profile_path.is_absolute() or not profile_path.is_file():
-                raise AdapterError(
-                    "service profile must be an absolute path to a readable file"
-                )
+                raise AdapterError("service profile must be an absolute path to a readable file")
             profile = ServiceProfile.from_json(
                 load_json(profile_path),
                 access_token=access_token or None,
