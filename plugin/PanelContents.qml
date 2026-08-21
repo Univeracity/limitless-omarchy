@@ -212,8 +212,8 @@ Item {
       width: 440
       height: Math.max(34, Style.spacing.controlHeight)
       text: root.panel && root.panel.serviceExpanded
-        ? "Hide managed service"
-        : "Use managed service (optional)"
+        ? "Hide Limitless service"
+        : "Use Limitless service (optional)"
       bordered: true
       focusable: true
       enabled: !root.commandRunning
@@ -224,46 +224,24 @@ Item {
       visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
       width: 440
       wrapMode: Text.Wrap
-      text: "A profile pins the service, trust root, policy, mode, and scopes. Inspect sends no task. Query sends only the objective and minimal receiver context you approve."
+      text: "Enable verifies the release-pinned service identity, trust root, and policy. No account, profile file, or API key is required. Queries send only the objective and minimal receiver context you approve."
       color: Color.popups.text
       opacity: 0.7
       font.family: Style.font.family
       font.pixelSize: Style.font.bodySmall
     }
 
-    Rectangle {
+    Button {
       visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
       width: 440
       height: Math.max(34, Style.spacing.controlHeight)
-      radius: Style.cornerRadius
-      color: Color.popups.background
-      border.color: serviceProfileInput.activeFocus ? Color.accent : Color.popups.border
-      border.width: 1
-
-      TextInput {
-        id: serviceProfileInput
-        anchors.fill: parent
-        anchors.leftMargin: 10
-        anchors.rightMargin: 10
-        verticalAlignment: TextInput.AlignVCenter
-        clip: true
-        text: root.panel ? root.panel.serviceProfilePath : ""
-        color: Color.popups.text
-        font.family: Style.font.family
-        font.pixelSize: Style.font.bodySmall
-        selectByMouse: true
-        onTextEdited: if (root.panel) root.panel.serviceProfilePath = text
-
-        Text {
-          anchors.fill: parent
-          verticalAlignment: Text.AlignVCenter
-          visible: serviceProfileInput.text === ""
-          text: "/absolute/path/to/service-profile.json"
-          color: Color.popups.text
-          opacity: 0.45
-          font: serviceProfileInput.font
-        }
-      }
+      text: root.panel && root.panel.serviceReady
+        ? "Official service enabled"
+        : "Enable official service"
+      bordered: true
+      focusable: true
+      enabled: !root.commandRunning
+      onClicked: if (root.panel) root.panel.activateService()
     }
 
     Rectangle {
@@ -301,77 +279,37 @@ Item {
       }
     }
 
-    Row {
+    Rectangle {
       visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
       width: 440
-      spacing: 8
+      height: Math.max(34, Style.spacing.controlHeight)
+      radius: Style.cornerRadius
+      color: Color.popups.background
+      border.color: omarchyReleaseInput.activeFocus ? Color.accent : Color.popups.border
+      border.width: 1
 
-      Rectangle {
-        width: 216
-        height: Math.max(34, Style.spacing.controlHeight)
-        radius: Style.cornerRadius
-        color: Color.popups.background
-        border.color: omarchyReleaseInput.activeFocus ? Color.accent : Color.popups.border
-        border.width: 1
+      TextInput {
+        id: omarchyReleaseInput
+        anchors.fill: parent
+        anchors.leftMargin: 10
+        anchors.rightMargin: 10
+        verticalAlignment: TextInput.AlignVCenter
+        clip: true
+        text: root.panel ? root.panel.omarchyRelease : ""
+        color: Color.popups.text
+        font.family: Style.font.family
+        font.pixelSize: Style.font.bodySmall
+        selectByMouse: true
+        onTextEdited: if (root.panel) root.panel.omarchyRelease = text
 
-        TextInput {
-          id: omarchyReleaseInput
+        Text {
           anchors.fill: parent
-          anchors.leftMargin: 10
-          anchors.rightMargin: 10
-          verticalAlignment: TextInput.AlignVCenter
-          clip: true
-          text: root.panel ? root.panel.omarchyRelease : ""
+          verticalAlignment: Text.AlignVCenter
+          visible: omarchyReleaseInput.text === ""
+          text: "Omarchy release (optional)"
           color: Color.popups.text
-          font.family: Style.font.family
-          font.pixelSize: Style.font.bodySmall
-          selectByMouse: true
-          onTextEdited: if (root.panel) root.panel.omarchyRelease = text
-
-          Text {
-            anchors.fill: parent
-            verticalAlignment: Text.AlignVCenter
-            visible: omarchyReleaseInput.text === ""
-            text: "Omarchy release (optional)"
-            color: Color.popups.text
-            opacity: 0.45
-            font: omarchyReleaseInput.font
-          }
-        }
-      }
-
-      Rectangle {
-        width: 216
-        height: Math.max(34, Style.spacing.controlHeight)
-        radius: Style.cornerRadius
-        color: Color.popups.background
-        border.color: serviceTokenInput.activeFocus ? Color.accent : Color.popups.border
-        border.width: 1
-
-        TextInput {
-          id: serviceTokenInput
-          anchors.fill: parent
-          anchors.leftMargin: 10
-          anchors.rightMargin: 10
-          verticalAlignment: TextInput.AlignVCenter
-          clip: true
-          echoMode: TextInput.Password
-          text: root.panel ? root.panel.serviceAccessToken : ""
-          color: Color.popups.text
-          font.family: Style.font.family
-          font.pixelSize: Style.font.bodySmall
-          selectByMouse: true
-          onTextEdited: if (root.panel) root.panel.serviceAccessToken = text
-
-          Text {
-            anchors.fill: parent
-            verticalAlignment: Text.AlignVCenter
-            visible: serviceTokenInput.text === ""
-            text: "Access token (optional)"
-            color: Color.popups.text
-            opacity: 0.45
-            font: serviceTokenInput.font
-          }
+          opacity: 0.45
+          font: omarchyReleaseInput.font
         }
       }
     }
@@ -387,7 +325,7 @@ Item {
         text: "Inspect trust boundary"
         bordered: true
         focusable: true
-        enabled: !root.commandRunning
+        enabled: root.panel && root.panel.serviceReady && !root.commandRunning
         onClicked: if (root.panel) root.panel.inspectService()
       }
 
@@ -397,7 +335,7 @@ Item {
         text: "Query managed service"
         bordered: true
         focusable: true
-        enabled: !root.commandRunning
+        enabled: root.panel && root.panel.serviceReady && !root.commandRunning
         onClicked: if (root.panel) root.panel.queryService()
       }
     }

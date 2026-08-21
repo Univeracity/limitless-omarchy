@@ -1,7 +1,7 @@
 """Explicit managed-service adapter for the Omarchy panel.
 
 Local reuse never imports or calls this module.  The panel reaches it only
-after an owner supplies a service profile and selects Inspect or Query.
+after an owner explicitly enables, inspects, or queries the optional service.
 """
 
 from __future__ import annotations
@@ -14,6 +14,12 @@ from pathlib import Path
 from typing import Any
 
 from limitless_library.contracts import ContractError, load_json
+from limitless_library.official_service import (
+    OfficialServiceActivationError,
+    OfficialServiceUnavailableError,
+    activate_official_service,
+    activated_service_profile,
+)
 from limitless_library.service_connector import (
     ServiceConnector,
     ServiceConnectorError,
@@ -30,21 +36,56 @@ _NUMERIC_RELEASE = re.compile(r"^[0-9]+(?:\.[0-9]+){0,3}$")
 
 
 def _service_connector(
-    profile_path: Path,
+    profile_path: Path | None,
     *,
     access_token: str | None,
     connector_factory: ConnectorFactory,
 ) -> ServiceConnector:
-    if not profile_path.is_absolute() or not profile_path.is_file():
-        raise AdapterError("service profile must be an absolute path to a readable file")
     try:
-        profile = ServiceProfile.from_json(
-            load_json(profile_path),
-            access_token=access_token or None,
-        )
+        if profile_path is None:
+            profile = activated_service_profile(access_token=access_token or None)
+        else:
+            if not profile_path.is_absolute() or not profile_path.is_file():
+                raise AdapterError(
+                    "service profile must be an absolute path to a readable file"
+                )
+            profile = ServiceProfile.from_json(
+                load_json(profile_path),
+                access_token=access_token or None,
+            )
         return connector_factory(profile)
-    except (ContractError, OSError, ValueError) as error:
+    except AdapterError:
+        raise
+    except (
+        ContractError,
+        OfficialServiceActivationError,
+        OSError,
+        ValueError,
+    ) as error:
         raise AdapterError("service profile or credential is invalid") from error
+
+
+def activate_managed_service() -> dict[str, Any]:
+    """Enable the release-pinned official service from one explicit UI action."""
+
+    try:
+        state = activate_official_service()
+        profile = ServiceProfile.from_json(state["profile"])
+    except OfficialServiceUnavailableError:
+        return {
+            "schemaVersion": "limitless.omarchy-service-status/0.1",
+            "mode": "service-unavailable",
+            "reason": "service-unavailable-local-still-available",
+        }
+    except (OfficialServiceActivationError, OSError, ValueError) as error:
+        raise AdapterError("official service activation failed") from error
+    return {
+        "schemaVersion": "limitless.omarchy-service-status/0.1",
+        "mode": "managed-service-ready",
+        "service": profile.public_summary(),
+        "policy": {"digest": profile.accepted_policy_digest},
+        "activatedAt": state["activatedAt"],
+    }
 
 
 def _service_status(
@@ -63,7 +104,7 @@ def _service_status(
 
 
 def inspect_managed_service(
-    profile_path: Path,
+    profile_path: Path | None = None,
     *,
     connector_factory: ConnectorFactory = ServiceConnector,
 ) -> dict[str, Any]:
@@ -158,7 +199,7 @@ def _managed_result(
 
 
 def query_managed_service(
-    profile_path: Path,
+    profile_path: Path | None = None,
     *,
     objective: str,
     access_token: str | None = None,

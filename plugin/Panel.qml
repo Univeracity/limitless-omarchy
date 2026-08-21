@@ -15,9 +15,7 @@ Item {
   property var manifest: null
   property bool opened: false
   property string catalogPath: ""
-  property string serviceProfilePath: ""
   property string serviceObjective: ""
-  property string serviceAccessToken: ""
   property string omarchyRelease: ""
   property bool serviceExpanded: false
   property bool serviceReady: false
@@ -40,10 +38,6 @@ Item {
     var payload = {}
     try { payload = JSON.parse(payloadJson || "{}") || {} } catch (e) {}
     if (payload.catalogPath !== undefined) catalogPath = String(payload.catalogPath)
-    if (payload.serviceProfilePath !== undefined) {
-      serviceProfilePath = String(payload.serviceProfilePath)
-      serviceExpanded = serviceProfilePath !== ""
-    }
     if (payload.omarchyRelease !== undefined) omarchyRelease = String(payload.omarchyRelease)
     serviceReady = false
     serviceSummary = "No managed-service request has been made."
@@ -54,7 +48,6 @@ Item {
 
   function close() {
     opened = false
-    serviceAccessToken = ""
     serviceObjective = ""
     pendingInput = ""
     if (command.running) command.running = false
@@ -86,29 +79,25 @@ Item {
     runRuntime("query-demo", [])
   }
 
+  function activateService() {
+    runRuntime("service-activate", [])
+  }
+
   function inspectService() {
-    if (serviceProfilePath.trim() === "") {
-      errorText = "Choose an absolute managed-service profile before inspecting it."
-      return
-    }
-    runRuntime("service-inspect", ["--profile", serviceProfilePath.trim()])
+    runRuntime("service-inspect", [])
   }
 
   function queryService() {
-    if (serviceProfilePath.trim() === "") {
-      errorText = "Choose an absolute managed-service profile before querying it."
-      return
-    }
     if (serviceObjective.trim() === "") {
       errorText = "Describe the customization to search for before sending a managed query."
       return
     }
-    var arguments = ["--profile", serviceProfilePath.trim()]
+    var arguments = []
     if (omarchyRelease.trim() !== "") arguments = arguments.concat(["--omarchy-release", omarchyRelease.trim()])
     var input = JSON.stringify({
       schemaVersion: "limitless.omarchy-service-query-input/0.1",
       objective: serviceObjective.trim(),
-      accessToken: serviceAccessToken === "" ? null : serviceAccessToken
+      accessToken: null
     })
     runRuntime("service-query", arguments, input)
   }
@@ -122,7 +111,6 @@ Item {
     pendingInput = stdinPayload === undefined ? "" : String(stdinPayload)
     if (pluginRoot === "") {
       pendingInput = ""
-      serviceAccessToken = ""
       serviceObjective = ""
       errorText = "The Omarchy plugin root is unavailable. Reinstall this reviewed plugin before continuing."
       return
@@ -143,7 +131,7 @@ Item {
       runtimeReady = String(value.mode || "") === "local-only"
       headline = runtimeReady ? "Local Library ready" : "Set up Limitless Library"
       detail = runtimeReady
-        ? "Choose a local catalog below, inspect the included example, or explicitly open the managed-service section."
+        ? "Choose a local catalog below, inspect the included example, or explicitly open the optional service section."
         : "Create an isolated local runtime to begin. Nothing will be shared."
       selectionReference = ""
       return
@@ -155,9 +143,10 @@ Item {
         var service = value.service || {}
         var policy = value.policy || {}
         headline = "Managed service verified"
-        detail = "The pinned service authority and policy match this profile. No task query was sent."
+        detail = "The release-pinned service authority and policy were verified. No task query was sent."
         serviceSummary = String(service.serviceId || "managed service") + " · "
-          + String(service.dataUseMode || "unknown mode") + " · "
+          + String(service.defaultAudience || "private") + " · "
+          + String(service.historyMode || "local-only") + " · "
           + String(policy.digest || "policy unavailable")
       } else {
         headline = "Managed service unavailable"
@@ -195,7 +184,7 @@ Item {
       }
       serviceReady = value.reason !== "service-unavailable-local-still-available"
       serviceSummary = serviceReady
-        ? "Signed managed result verified against the selected profile."
+        ? "Signed service result verified against the activated authority."
         : "Service unavailable; local reuse remains available."
       return
     }
@@ -228,7 +217,6 @@ Item {
     onStarted: {
       if (root.pendingInput !== "") command.write(root.pendingInput + "\n")
       root.pendingInput = ""
-      root.serviceAccessToken = ""
       if (root.operation === "service-query") root.serviceObjective = ""
     }
     stdout: StdioCollector {
@@ -244,7 +232,6 @@ Item {
       if (exitCode === 0) root.applyResult(root.commandOutput)
       else root.errorText = root.commandError !== "" ? root.commandError : "The local runtime is unavailable."
       root.pendingInput = ""
-      root.serviceAccessToken = ""
       root.operation = ""
     }
   }

@@ -33,7 +33,7 @@ def test_package_pins_a_public_limitless_library_revision() -> None:
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
     assert "limitless-library @ git+https://github.com/univeracity/limitlesslibrary.git@" in project
-    assert "98a397ac6c788b27c39b371008f837a879222584" in project
+    assert "5c8240008831b0291f71b15e6146e17cf5d61d2c" in project
 
 
 def test_cli_keeps_local_queries_bounded_to_omarchy_private_reuse() -> None:
@@ -54,21 +54,24 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "function installRuntime()" in panel
     assert "function queryCatalog()" in panel
     assert "function queryExample()" in panel
+    assert "function activateService()" in panel
     assert "function inspectService()" in panel
     assert "function queryService()" in panel
     assert "stdinEnabled: true" in panel
     assert "command.write(root.pendingInput" in panel
-    assert 'root.serviceAccessToken = ""' in panel
     assert 'root.serviceObjective = ""' in panel
     assert "PanelContents" in panel
     assert "Flickable" in contents
     assert "Math.min(content.implicitHeight + 40, 680)" in contents
     assert "TextInput" in contents
     assert "Try included example" in contents
-    assert "Use managed service (optional)" in contents
+    assert "Use Limitless service (optional)" in contents
+    assert "Enable official service" in contents
     assert "Inspect trust boundary" in contents
     assert "Query managed service" in contents
-    assert "echoMode: TextInput.Password" in contents
+    assert "profile file, or API key" in contents
+    assert "serviceProfilePath" not in panel + contents
+    assert "serviceAccessToken" not in panel + contents
     assert "WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive" in panel
     assert "selectionReference" in panel
     assert "method.summary" in panel
@@ -97,6 +100,7 @@ def test_panel_runtime_is_syntax_valid_and_never_targets_system_python() -> None
     assert 'mv -- "$stage/venv" "$runtime"' not in text
     assert "service-inspect" in text
     assert "service-query" in text
+    assert "service-activate" in text
     assert "--objective" not in text
     assert "LIMITLESS_SERVICE_TOKEN" not in text
 

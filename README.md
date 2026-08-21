@@ -36,10 +36,11 @@ runtime and optional companion CLI:
 - does not silently install or enable a plugin; and
 - leaves decisions and evidence local.
 
-The managed Limitless implementation remains outside this repository. An
-owner can explicitly supply a profile that pins its endpoint, trust root,
-policy, data-use mode, and scopes. Connecting never publishes local work;
-capture and sharing remain separate actions.
+The managed Limitless implementation remains outside this repository. A
+supported release can pin its official service identity, trust root, profile,
+and policy in the public Library dependency. Enabling it is always explicit.
+Connecting never publishes local work; capture and sharing remain separate
+actions.
 
 ## Use it from Omarchy
 
@@ -64,18 +65,19 @@ abstention.
 
 ## Optional managed service from the panel
 
-Local use is always available without a service profile. To inspect an
-explicitly authorized managed service, open **Use managed service (optional)**
-and provide an absolute profile path. **Inspect trust boundary** verifies the
-pinned service identity, root-key history, policy digest, protocol, and result
-keys without sending a task query.
+Local use is always available without a service connection. Open **Use
+Limitless service (optional)** and select **Enable official service**. That one
+action fetches the exact release-pinned, credential-free profile and verifies
+the service identity, original root, root-key history, policy digest, protocol,
+and result keys before saving activation state. No account, profile download,
+API key, terminal, or agent setup is required. A build without published
+official trust material stays local-only.
 
 After inspection, enter one customization objective and select **Query managed
 service**. The panel sends that objective plus the minimal Omarchy receiver
-context under the profile's declared data-use mode and scopes. An optional
-bearer credential is masked, sent to the panel-owned process over stdin, and
-cleared with the objective after dispatch. Neither is placed in argv,
-environment, the profile, or a local file by the plugin.
+context under the activated audience and history boundary. The objective is
+sent to the panel-owned process over bounded stdin and cleared after dispatch;
+it is never placed in argv or a local file by the plugin.
 
 The result must be signed, current, bound to the exact query, policy-compatible,
 and receiver-compatible before the panel displays it. Service unavailability
@@ -116,18 +118,21 @@ Validate this plugin using Omarchy's own validator:
 
     limitless-omarchy validate-plugin .
 
-Verify an explicitly selected service profile without sending a task:
+Enable and verify the release-pinned official service without sending a task:
 
-    limitless-omarchy service-inspect --profile /absolute/path/to/service-profile.json
+    limitless-omarchy service-activate
+    limitless-omarchy service-inspect
 
 For a lower-level managed query, provide one
 `limitless.omarchy-service-query-input/0.1` JSON line on stdin. Keeping the
-objective and optional token on stdin prevents them from appearing in the
-process list:
+objective on stdin prevents it from appearing in the process list:
 
     limitless-omarchy service-query \
-      --profile /absolute/path/to/service-profile.json \
       < /path/to/ephemeral-query-input.json
+
+`--profile /absolute/path/to/owner-reviewed-profile.json` remains available on
+inspection and query commands as advanced lower-level control for another
+compatible service. It is not part of ordinary panel setup.
 
 The local-catalog query returns a structured local-only result. An unavailable
 catalog, missing core library, ambiguous candidate, or compatibility mismatch
@@ -227,6 +232,7 @@ For a real-session validation path, use the non-mutating
 
 ## Status
 
-Initial local-first implementation with an explicit managed-service connector.
-No service profile is bundled, and the panel intentionally exposes no capture
-or sharing control.
+Initial local-first implementation with one-action, release-pinned official
+service activation and an advanced alternate-profile connector. No live
+official identity is invented by this source tree, and the panel intentionally
+exposes no capture or sharing control.

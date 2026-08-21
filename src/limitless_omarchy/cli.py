@@ -13,7 +13,11 @@ from limitless_library.contracts import strict_json_loads
 from .adapter import AdapterError, query_local_catalog, seal_local_capsule, status, validate_plugin
 from .mcp_server import serve
 from .provider import serve_general_provider
-from .service import inspect_managed_service, query_managed_service
+from .service import (
+    activate_managed_service,
+    inspect_managed_service,
+    query_managed_service,
+)
 
 MAX_SERVICE_INPUT_BYTES = 8 * 1024
 
@@ -79,17 +83,30 @@ def _parser() -> argparse.ArgumentParser:
     )
     provider.add_argument("--catalog", type=Path, required=True)
 
+    subparsers.add_parser(
+        "service-activate",
+        help="enable the release-pinned official service after verifying its authority",
+    )
+
     service_inspect = subparsers.add_parser(
         "service-inspect",
-        help="verify an explicitly selected managed-service profile without sending a task",
+        help="verify the enabled official service without sending a task",
     )
-    service_inspect.add_argument("--profile", type=Path, required=True)
+    service_inspect.add_argument(
+        "--profile",
+        type=Path,
+        help="advanced: inspect an explicit alternate service profile",
+    )
 
     service_query = subparsers.add_parser(
         "service-query",
         help="send one explicit Omarchy request read from bounded stdin",
     )
-    service_query.add_argument("--profile", type=Path, required=True)
+    service_query.add_argument(
+        "--profile",
+        type=Path,
+        help="advanced: query through an explicit alternate service profile",
+    )
     service_query.add_argument("--omarchy-release")
     service_query.add_argument("--request-id")
     return parser
@@ -121,6 +138,8 @@ def main() -> None:
             serve(args.catalog, omarchy_release=args.omarchy_release)
         elif args.command == "provider":
             serve_general_provider(args.catalog)
+        elif args.command == "service-activate":
+            _print(activate_managed_service())
         elif args.command == "service-inspect":
             _print(inspect_managed_service(args.profile))
         elif args.command == "service-query":

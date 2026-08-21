@@ -27,7 +27,8 @@ Actions:
   setup       explicitly create or update the isolated local runtime
   query       query a selected local catalog before an Omarchy customization
   query-demo  query the checked-in local example catalog
-  service-inspect  verify an explicitly selected managed-service profile
+  service-activate enable the release-pinned official service
+  service-inspect  verify the enabled official service
   service-query    read one managed query as a bounded JSON line from stdin
 
 The panel invokes this script itself. It is also intentionally usable as a
@@ -76,7 +77,7 @@ while (($#)); do
 done
 
 case "$action" in
-  status|setup|query|query-demo|service-inspect|service-query) ;;
+  status|setup|query|query-demo|service-activate|service-inspect|service-query) ;;
   *)
     fail "unrecognized action: $action"
     ;;
@@ -148,15 +149,26 @@ case "$action" in
     runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
     exec "$runtime_cli" query --catalog "$plugin_root/examples/catalog"
     ;;
+  service-activate)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    exec "$runtime_cli" service-activate
+    ;;
   service-inspect)
     runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
-    [[ -n $profile && $profile == /* && -f $profile ]] || fail "an absolute readable service profile is required"
-    exec "$runtime_cli" service-inspect --profile "$profile"
+    service_arguments=(service-inspect)
+    if [[ -n $profile ]]; then
+      [[ $profile == /* && -f $profile ]] || fail "an alternate service profile must be an absolute readable file"
+      service_arguments+=(--profile "$profile")
+    fi
+    exec "$runtime_cli" "${service_arguments[@]}"
     ;;
   service-query)
     runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
-    [[ -n $profile && $profile == /* && -f $profile ]] || fail "an absolute readable service profile is required"
-    service_arguments=(service-query --profile "$profile")
+    service_arguments=(service-query)
+    if [[ -n $profile ]]; then
+      [[ $profile == /* && -f $profile ]] || fail "an alternate service profile must be an absolute readable file"
+      service_arguments+=(--profile "$profile")
+    fi
     [[ -z $omarchy_release ]] || service_arguments+=(--omarchy-release "$omarchy_release")
     exec "$runtime_cli" "${service_arguments[@]}"
     ;;

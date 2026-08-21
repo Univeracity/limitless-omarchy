@@ -17,20 +17,19 @@ ShellRoot {
     property bool serviceExpanded: true
     property bool serviceReady: true
     property string headline: "Local Library ready"
-    property string detail: "Local reuse remains available. Managed discovery is an explicit opt-in."
+    property string detail: "Local reuse remains available. Service discovery is an explicit opt-in."
     property string selectionReference: ""
     property string catalogPath: "/home/user/.local/share/limitless/catalog"
     property string errorText: ""
     property string operation: ""
-    property string serviceProfilePath: "/home/user/.config/limitless/service-profile.json"
     property string serviceObjective: "Find a recent customization that improves workspace focus"
     property string omarchyRelease: "2026.08"
-    property string serviceAccessToken: ""
-    property string serviceSummary: "Pinned service · standard data use · accepted policy"
+    property string serviceSummary: "Pinned service · private · local-only · accepted policy"
 
     function installRuntime() {}
     function queryExample() {}
     function queryCatalog() {}
+    function activateService() {}
     function inspectService() {}
     function queryService() {}
   }

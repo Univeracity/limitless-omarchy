@@ -17,6 +17,7 @@ from limitless_library.mcp_protocol import modern_metadata
 from limitless_library.mcp_server import TOOL_NAME as GENERAL_TOOL_NAME
 from limitless_library.service_connector import ServiceConnectorError, ServiceUnavailableError
 
+from limitless_omarchy import service as service_module
 from limitless_omarchy.adapter import (
     AdapterError,
     build_query,
@@ -30,6 +31,7 @@ from limitless_omarchy.cli import _service_query_input
 from limitless_omarchy.mcp_server import TOOL_NAME, handle_message
 from limitless_omarchy.provider import general_provider_command
 from limitless_omarchy.service import (
+    activate_managed_service,
     build_service_receiver_context,
     inspect_managed_service,
     query_managed_service,
@@ -68,7 +70,7 @@ def service_profile(tmp_path: Path) -> Path:
     path.write_text(
         json.dumps(
             {
-                "schemaVersion": "limitless.service-profile/1.0",
+                "schemaVersion": "limitless.service-profile/1.1",
                 "apiBaseUrl": "https://api.example.com",
                 "serviceId": "service:example",
                 "rootKey": {
@@ -77,8 +79,10 @@ def service_profile(tmp_path: Path) -> Path:
                     "publicKey": "A" * 43,
                 },
                 "acceptedPolicyDigest": "sha256:" + "1" * 64,
-                "dataUseMode": "standard",
-                "requestedScopes": ["public"],
+                "executionMode": "service",
+                "defaultAudience": "private",
+                "historyMode": "local-only",
+                "requestedAudiences": ["public"],
             }
         ),
         encoding="utf-8",
@@ -196,6 +200,27 @@ def test_service_inspection_verifies_profile_without_a_query(tmp_path: Path) -> 
     assert result["mode"] == "managed-service-ready"
     assert result["service"]["serviceId"] == "service:example"
     assert result["policy"]["digest"] == "sha256:" + "1" * 64
+
+
+def test_service_activation_is_one_action_and_persists_no_credential(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    profile = load_json(service_profile(tmp_path))
+    monkeypatch.setattr(
+        service_module,
+        "activate_official_service",
+        lambda: {
+            "profile": profile,
+            "activatedAt": "2026-08-20T22:00:00Z",
+        },
+    )
+
+    result = activate_managed_service()
+
+    assert result["mode"] == "managed-service-ready"
+    assert result["service"]["defaultAudience"] == "private"
+    assert result["service"]["authenticated"] is False
 
 
 def test_managed_query_returns_verified_shape_without_echoing_sensitive_input(tmp_path: Path) -> None:
