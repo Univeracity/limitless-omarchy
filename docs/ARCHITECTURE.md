@@ -49,8 +49,9 @@ configuration, or makes a service connection.
 The panel invokes a bundled runtime script rather than assuming the companion
 CLI exists on `PATH`. The script accepts an explicit plugin-root argument,
 requires an absolute XDG data directory, and exposes `status`, `setup`,
-`query`, `query-demo`, `service-activate`, `service-inspect`, and
-`service-query`, `service-artifact-stage`, `service-artifact-review`, and
+`query`, `query-demo`, `service-activate`, `service-inspect`, `service-query`,
+`service-artifact-stage`, `service-artifact-review`,
+`service-artifact-install`, `service-artifact-enable`, and
 `service-publication` actions.
 Service activation is one explicit UI action and uses only trust material
 pinned in the installed public Library release; ordinary users never manage a
@@ -64,10 +65,25 @@ retaining the objective. The explicit Omarchy receiver adapter accepts only the
 signed `limitless.exact-file-bundle/1.0` descriptor, parses the canonical
 bundle, materializes a digest-named owner-only review tree without overwrite,
 reverifies its complete file inventory, and invokes only
-`omarchy plugin validate <review-tree>`. It does not infer an installation
-target or call Omarchy add, enable, disable, or remove operations. Native
-installation and enablement remain separate owner-controlled actions after
-review.
+`omarchy plugin validate <review-tree>`.
+
+After a successful review, **Install reviewed plugin disabled** is a separate
+owner action. It copies the same verified bytes without overwrite into
+Omarchy's user plugin directory, rescans the native registry, proves the exact
+plugin is discovered and disabled, and writes signed owner-only installation
+state. It refuses an existing plugin id or an id already referenced by
+`shell.json`; it never executes an install hook or invokes plugin code.
+
+**Enable reviewed plugin** is another separate owner action. It reloads and
+reverifies the exact installed inventory and signed installation state before
+calling Omarchy's fixed-argument native enable operation. The adapter then
+requires the native registry and persisted shell configuration to agree. For
+summonable plugins it also invokes the plugin through Omarchy shell IPC; for
+eagerly loaded widget and service kinds, successful native enablement is the
+runtime invocation event. A signed local adoption receipt binds the original
+decision, exact bundle, installed path, native runtime projection, and observed
+invocation. Full-bar replacement is excluded because it has no ordinary
+disabled-to-enabled transition and changes the desktop's controlling bar.
 
 The companion also provides an Omarchy-aware local MCP tool. It derives the
 same minimal receiver profile before calling the generic Library decision

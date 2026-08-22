@@ -352,6 +352,30 @@ Item {
       onClicked: if (root.panel) root.panel.prepareServiceArtifactReview()
     }
 
+    Button {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+        && root.panel.serviceArtifactInstallAvailable
+      width: 440
+      height: Math.max(34, Style.spacing.controlHeight)
+      text: "Install reviewed plugin disabled"
+      bordered: true
+      focusable: true
+      enabled: root.panel && root.panel.serviceReady && !root.commandRunning
+      onClicked: if (root.panel) root.panel.installServiceArtifactDisabled()
+    }
+
+    Button {
+      visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
+        && root.panel.serviceArtifactEnableAvailable
+      width: 440
+      height: Math.max(34, Style.spacing.controlHeight)
+      text: "Enable reviewed plugin"
+      bordered: true
+      focusable: true
+      enabled: root.panel && root.panel.serviceReady && !root.commandRunning
+      onClicked: if (root.panel) root.panel.enableServiceArtifact()
+    }
+
     Text {
       visible: root.panel && root.panel.runtimeReady && root.panel.serviceExpanded
         && (root.panel.serviceArtifactReviewPath !== "" || root.panel.serviceArtifactStagedPath !== "")

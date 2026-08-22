@@ -33,6 +33,8 @@ Actions:
   service-publication read one explicit publication action from bounded stdin
   service-artifact-stage redeem one exact-artifact continuation from bounded stdin
   service-artifact-review materialize and validate one exact Omarchy bundle from bounded stdin
+  service-artifact-install install reviewed exact bytes disabled from bounded stdin
+  service-artifact-enable explicitly enable one signed installation from bounded stdin
 
 The panel invokes this script itself. It is also intentionally usable as a
 lower-level diagnostic surface; it never installs into the system Python.
@@ -80,7 +82,7 @@ while (($#)); do
 done
 
 case "$action" in
-  status|setup|query|query-demo|service-activate|service-inspect|service-query|service-publication|service-artifact-stage|service-artifact-review) ;;
+  status|setup|query|query-demo|service-activate|service-inspect|service-query|service-publication|service-artifact-stage|service-artifact-review|service-artifact-install|service-artifact-enable) ;;
   *)
     fail "unrecognized action: $action"
     ;;
@@ -186,5 +188,13 @@ case "$action" in
   service-artifact-review)
     runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
     exec "$runtime_cli" service-artifact-review
+    ;;
+  service-artifact-install)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    exec "$runtime_cli" service-artifact-install
+    ;;
+  service-artifact-enable)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    exec "$runtime_cli" service-artifact-enable
     ;;
 esac

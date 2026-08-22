@@ -23,7 +23,6 @@ from limitless_library.service_connector import (
     ServiceUnavailableError,
 )
 from limitless_library.service_identity import InstallationSigner
-
 from limitless_omarchy import service as service_module
 from limitless_omarchy.adapter import (
     AdapterError,
@@ -35,6 +34,8 @@ from limitless_omarchy.adapter import (
     validate_plugin,
 )
 from limitless_omarchy.cli import (
+    _service_artifact_enable_input,
+    _service_artifact_install_input,
     _service_artifact_review_input,
     _service_artifact_stage_input,
     _service_publication_input,
@@ -45,7 +46,9 @@ from limitless_omarchy.provider import general_provider_command
 from limitless_omarchy.service import (
     activate_managed_service,
     build_service_receiver_context,
+    enable_managed_plugin,
     inspect_managed_service,
+    install_managed_plugin_disabled,
     manage_publication,
     prepare_managed_plugin_review,
     query_managed_service,
@@ -159,7 +162,11 @@ class InvalidAuthorityConnector(FakeServiceConnector):
 class ArtifactContinuationConnector(FakeServiceConnector):
     artifact = build_exact_file_bundle(
         {
-            "manifest.json": b'{"schemaVersion":1,"id":"example.reviewed-plugin"}\n',
+            "manifest.json": (
+                b'{"schemaVersion":1,"id":"example.reviewed-plugin",'
+                b'"name":"Reviewed plugin","version":"1.0.0","kinds":["panel"],'
+                b'"entryPoints":{"panel":"plugin.qml"}}\n'
+            ),
             "plugin.qml": b"import QtQuick\nItem {}\n",
         }
     )
@@ -456,6 +463,121 @@ def test_exact_result_projects_no_delivery_secret_and_stages_from_signed_local_s
     assert commands == [("omarchy", "plugin", "validate", str(review_path))]
     assert not any(operation in " ".join(commands[0]) for operation in (" add ", " enable ", " remove "))
 
+    class ReceiverRuntime:
+        def __init__(self) -> None:
+            self.enabled = False
+            self.commands: list[tuple[str, ...]] = []
+
+        def __call__(self, argv: object) -> subprocess.CompletedProcess[str]:
+            command = tuple(argv)  # type: ignore[arg-type]
+            self.commands.append(command)
+            if command[:3] == ("omarchy", "plugin", "validate"):
+                return completed(stdout="plugin valid")
+            if command == ("omarchy-shell", "shell", "rescanPlugins"):
+                return completed(stdout="ok")
+            if command == ("omarchy", "plugin", "list", "--json"):
+                installed = Path(environment["HOME"]) / ".config/omarchy/plugins/example.reviewed-plugin"
+                records = []
+                if installed.is_dir():
+                    records.append(
+                        {
+                            "id": "example.reviewed-plugin",
+                            "name": "Reviewed plugin",
+                            "kinds": ["panel"],
+                            "enabled": self.enabled,
+                            "active": False,
+                            "canDisable": True,
+                            "firstParty": False,
+                            "clonedFrom": "",
+                        }
+                    )
+                return completed(stdout=json.dumps(records))
+            if command == ("omarchy", "plugin", "enable", "example.reviewed-plugin"):
+                self.enabled = True
+                config = Path(environment["HOME"]) / ".config/omarchy/shell.json"
+                config.parent.mkdir(parents=True, exist_ok=True)
+                config.write_text(
+                    json.dumps({"version": 1, "plugins": [{"id": "example.reviewed-plugin"}]}),
+                    encoding="utf-8",
+                )
+                return completed(stdout="Enabled example.reviewed-plugin")
+            if command == ("omarchy", "plugin", "disable", "example.reviewed-plugin"):
+                self.enabled = False
+                return completed(stdout="Disabled example.reviewed-plugin")
+            if command == (
+                "omarchy-shell",
+                "shell",
+                "summon",
+                "example.reviewed-plugin",
+                "{}",
+            ):
+                return completed(stdout="ok")
+            return completed(returncode=99, stderr="unexpected receiver command")
+
+    receiver = ReceiverRuntime()
+    installed = install_managed_plugin_disabled(
+        state,
+        environ=environment,
+        runner=receiver,
+        occurred_at=datetime(2026, 8, 22, 12, tzinfo=UTC),
+    )
+    assert installed["installationDisposition"] == "installed-disabled"
+    assert installed["enabled"] is False
+    assert Path(installed["installPath"], "plugin.qml").read_bytes() == b"import QtQuick\nItem {}\n"
+    assert Path(installed["installationStatePath"]).stat().st_mode & 0o777 == 0o600
+    assert (
+        install_managed_plugin_disabled(
+            state,
+            environ=environment,
+            runner=receiver,
+            occurred_at=datetime(2026, 8, 22, 12, tzinfo=UTC),
+        )
+        == installed
+    )
+
+    adopted = enable_managed_plugin(
+        Path(installed["installationStatePath"]),
+        environ=environment,
+        runner=receiver,
+        occurred_at=datetime(2026, 8, 22, 12, 1, tzinfo=UTC),
+    )
+    assert adopted["installationDisposition"] == "enabled"
+    assert adopted["observedInvocation"] == {
+        "observed": True,
+        "kind": "omarchy-shell-summon",
+        "pluginId": "example.reviewed-plugin",
+        "nativeRecordDigest": adopted["observedInvocation"]["nativeRecordDigest"],
+    }
+    assert adopted["observedInvocation"]["nativeRecordDigest"].startswith("sha256:")
+    assert Path(adopted["adoptionReceiptPath"]).stat().st_mode & 0o777 == 0o600
+    assert (
+        enable_managed_plugin(
+            Path(installed["installationStatePath"]),
+            environ=environment,
+            runner=receiver,
+        )
+        == adopted
+    )
+    assert ("omarchy", "plugin", "enable", "example.reviewed-plugin") in receiver.commands
+    assert (
+        "omarchy-shell",
+        "shell",
+        "summon",
+        "example.reviewed-plugin",
+        "{}",
+    ) in receiver.commands
+    installed_plugin = Path(installed["installPath"], "plugin.qml")
+    installed_plugin.write_text("substituted\n", encoding="utf-8")
+    installed_plugin.chmod(0o644)
+    with pytest.raises(AdapterError, match="no longer matches its exact bundle"):
+        enable_managed_plugin(
+            Path(installed["installationStatePath"]),
+            environ=environment,
+            runner=receiver,
+        )
+    installed_plugin.write_bytes(b"import QtQuick\nItem {}\n")
+    installed_plugin.chmod(0o644)
+
     plugin_path = review_path / "plugin.qml"
     plugin_path.unlink()
     plugin_path.symlink_to(Path(environment["HOME"]) / "outside.qml")
@@ -603,6 +725,40 @@ def test_service_artifact_review_cli_accepts_only_one_absolute_state_path(
     )
 
     assert _service_artifact_review_input() == Path(payload["handoffStatePath"])
+
+
+def test_service_artifact_install_cli_accepts_only_one_absolute_handoff_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "schemaVersion": "limitless.omarchy-artifact-install-input/0.1",
+        "handoffStatePath": "/home/user/.local/state/limitless-omarchy/artifact-handoffs/" + "4" * 64 + ".json",
+    }
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        SimpleNamespace(buffer=BytesIO((json.dumps(payload) + "\n").encode("utf-8"))),
+    )
+
+    assert _service_artifact_install_input() == Path(payload["handoffStatePath"])
+
+
+def test_service_artifact_enable_cli_accepts_only_one_absolute_installation_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "schemaVersion": "limitless.omarchy-artifact-enable-input/0.1",
+        "installationStatePath": "/home/user/.local/state/limitless-omarchy/receiver-installations/"
+        + "4" * 64
+        + ".json",
+    }
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        SimpleNamespace(buffer=BytesIO((json.dumps(payload) + "\n").encode("utf-8"))),
+    )
+
+    assert _service_artifact_enable_input() == Path(payload["installationStatePath"])
 
 
 def test_managed_publication_uses_current_anonymous_authority_and_projects_result(

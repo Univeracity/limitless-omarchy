@@ -58,10 +58,11 @@ the panel itself is the normal way to use Limitless Omarchy:
 2. Paste an absolute path to an owner-controlled local catalog.
 3. Click **Query local catalog** before a material customization.
 
-The panel never installs or enables a desktop change, captures a session, or
-shares work. It only creates the per-user runtime after the explicit button
-press, queries the catalog you select, and shows a component, method, or safe
-abstention.
+Setup and query actions never install or enable a desktop change, capture a
+session, or share work. They create the per-user runtime after the explicit
+button press, query the catalog you select, and show a component, method, or
+safe abstention. A compatible managed exact component exposes later, separate
+review, install-disabled, and enable actions; none is inferred from the query.
 
 ## Optional managed service from the panel
 
@@ -92,8 +93,15 @@ continuation into a new digest-verified owner-only file, requires the signed
 portable exact-file-bundle descriptor, materializes its canonical file tree
 without overwrite, and runs `omarchy plugin validate` against that tree. The
 objective is not retained. The panel displays the receiver-owned review path
-and native result, but never installs or enables the plugin; those remain
-separate owner-controlled Omarchy actions.
+and native result. If validation succeeds, **Install reviewed plugin disabled**
+copies those same exact bytes without overwrite into Omarchy's user plugin
+directory, rescans the native registry, and refuses to continue unless Omarchy
+reports the plugin as disabled. It saves a signed local installation state.
+**Enable reviewed plugin** is a second explicit action: it reverifies the
+installed inventory, asks Omarchy to enable it, confirms persisted native
+enablement, observes the plugin through Omarchy's runtime, and saves a signed
+local adoption receipt. Full-bar replacements fail closed because they do not
+have the ordinary disabled-to-enabled lifecycle.
 
 Public contribution is a separate, explicit panel action. Open **Share a
 reviewed contribution (optional)**, select one absolute path to a reviewed
@@ -168,7 +176,13 @@ panel supplies the owner-only continuation path itself. The explicit receiver
 adapter is available through `service-artifact-review`, using one bounded
 `limitless.omarchy-artifact-review-input/0.1` JSON line. It performs staging,
 exact-bundle materialization, inventory verification, and Omarchy-native
-validation while leaving installation and enablement untouched.
+validation. `service-artifact-install` accepts a bounded
+`limitless.omarchy-artifact-install-input/0.1` line and installs only that
+reviewed handoff while proving it remains disabled. `service-artifact-enable`
+accepts a bounded `limitless.omarchy-artifact-enable-input/0.1` line naming the
+signed installation state; it enables only the reverified tree and emits
+observed-invocation evidence. These commands are optional lower-level controls;
+the panel owns the normal flow.
 
 `--profile /absolute/path/to/owner-reviewed-profile.json` remains available on
 inspection and query commands as advanced lower-level control for another

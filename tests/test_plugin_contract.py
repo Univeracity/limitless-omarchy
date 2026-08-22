@@ -59,6 +59,8 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "function queryService()" in panel
     assert "function stageServiceArtifact()" in panel
     assert "function prepareServiceArtifactReview()" in panel
+    assert "function installServiceArtifactDisabled()" in panel
+    assert "function enableServiceArtifact()" in panel
     assert "function publishContribution()" in panel
     assert "function inspectPublication()" in panel
     assert "function withdrawPublication()" in panel
@@ -77,6 +79,8 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "Inspect trust boundary" in contents
     assert "Query managed service" in contents
     assert "Prepare verified plugin review" in contents
+    assert "Install reviewed plugin disabled" in contents
+    assert "Enable reviewed plugin" in contents
     assert "Share a reviewed contribution (optional)" in contents
     assert "Limitless does not scan the workspace" in contents
     assert "Open verified public publication policy" in contents
@@ -119,6 +123,8 @@ def test_panel_runtime_is_syntax_valid_and_never_targets_system_python() -> None
     assert "service-publication" in text
     assert "service-artifact-stage" in text
     assert "service-artifact-review" in text
+    assert "service-artifact-install" in text
+    assert "service-artifact-enable" in text
     assert "--objective" not in text
     assert "LIMITLESS_SERVICE_TOKEN" not in text
 

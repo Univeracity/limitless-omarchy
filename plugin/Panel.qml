@@ -25,6 +25,10 @@ Item {
   property bool serviceArtifactStageAvailable: false
   property string serviceArtifactReviewPath: ""
   property bool serviceArtifactReviewAvailable: false
+  property bool serviceArtifactInstallAvailable: false
+  property string serviceArtifactInstallationStatePath: ""
+  property bool serviceArtifactEnableAvailable: false
+  property string serviceArtifactAdoptionReceiptPath: ""
   property bool publicationExpanded: false
   property string publicationDraftPath: ""
   property string publicationStatePath: ""
@@ -62,6 +66,10 @@ Item {
     serviceArtifactStageAvailable = false
     serviceArtifactReviewPath = ""
     serviceArtifactReviewAvailable = false
+    serviceArtifactInstallAvailable = false
+    serviceArtifactInstallationStatePath = ""
+    serviceArtifactEnableAvailable = false
+    serviceArtifactAdoptionReceiptPath = ""
     publicationPolicyAccepted = false
     publicationPolicyReady = false
     publicationPolicyUrl = ""
@@ -152,6 +160,30 @@ Item {
       handoffStatePath: serviceArtifactHandoffStatePath
     })
     runRuntime("service-artifact-review", [], input)
+  }
+
+  function installServiceArtifactDisabled() {
+    if (!serviceArtifactInstallAvailable || !serviceArtifactHandoffStatePath.startsWith("/")) {
+      errorText = "Review and validate one exact Omarchy bundle before installing it."
+      return
+    }
+    var input = JSON.stringify({
+      schemaVersion: "limitless.omarchy-artifact-install-input/0.1",
+      handoffStatePath: serviceArtifactHandoffStatePath
+    })
+    runRuntime("service-artifact-install", [], input)
+  }
+
+  function enableServiceArtifact() {
+    if (!serviceArtifactEnableAvailable || !serviceArtifactInstallationStatePath.startsWith("/")) {
+      errorText = "No signed disabled installation is awaiting explicit enablement."
+      return
+    }
+    var input = JSON.stringify({
+      schemaVersion: "limitless.omarchy-artifact-enable-input/0.1",
+      installationStatePath: serviceArtifactInstallationStatePath
+    })
+    runRuntime("service-artifact-enable", [], input)
   }
 
   function publishContribution() {
@@ -294,6 +326,10 @@ Item {
       serviceArtifactReviewAvailable = serviceArtifactStageAvailable
       serviceArtifactStagedPath = ""
       serviceArtifactReviewPath = ""
+      serviceArtifactInstallAvailable = false
+      serviceArtifactInstallationStatePath = ""
+      serviceArtifactEnableAvailable = false
+      serviceArtifactAdoptionReceiptPath = ""
       selectionReference = serviceSelection && serviceSelection.title
         ? String(serviceSelection.title)
         : String(value.requestDigest || "")
@@ -342,14 +378,46 @@ Item {
       selectionReference = String(value.digest || "")
       var validation = value.nativeValidation || {}
       if (String(validation.status || "invalid") === "valid") {
+        serviceArtifactInstallAvailable = true
         headline = "Verified plugin ready for review"
-        detail = "Exact bundle files were materialized without overwrite and passed Omarchy's native validator. No installation or enablement occurred."
-        serviceSummary = "Review the receiver-owned tree, then choose any native installation action separately."
+        detail = "Exact bundle files were materialized without overwrite and passed Omarchy's native validator. Review them before choosing install disabled."
+        serviceSummary = "Installation and enablement remain separate explicit actions."
       } else {
+        serviceArtifactInstallAvailable = false
         headline = "Plugin requires review"
         detail = "Exact bundle files were materialized without overwrite, but Omarchy's native validator did not accept the tree. Nothing was installed or enabled."
         serviceSummary = String(validation.stderr || validation.stdout || "Native validation failed closed.")
       }
+      return
+    }
+    if (value.schemaVersion === "limitless.omarchy-artifact-install-result/0.1") {
+      runtimeReady = true
+      disposition = "exact-component"
+      serviceArtifactInstallAvailable = false
+      serviceArtifactEnableAvailable = true
+      serviceArtifactInstallationStatePath = String(value.installationStatePath || "")
+      serviceArtifactReviewPath = String(value.installPath || serviceArtifactReviewPath)
+      selectionReference = String(value.pluginId || value.digest || "")
+      headline = "Verified plugin installed disabled"
+      detail = "Exact reviewed bytes are installed, but Omarchy confirms they are disabled. Enablement still requires a separate explicit action."
+      serviceSummary = "No plugin entry point has been invoked."
+      return
+    }
+    if (value.schemaVersion === "limitless.omarchy-artifact-adoption-result/0.1") {
+      runtimeReady = true
+      disposition = "exact-component"
+      serviceArtifactInstallAvailable = false
+      serviceArtifactEnableAvailable = false
+      serviceArtifactAdoptionReceiptPath = String(value.adoptionReceiptPath || "")
+      selectionReference = String(value.pluginId || value.digest || "")
+      var invocation = value.observedInvocation || {}
+      headline = invocation.observed === true ? "Verified adoption observed" : "Enablement requires review"
+      detail = invocation.observed === true
+        ? "Omarchy enabled and invoked the reviewed exact plugin. Signed local evidence now binds selection, installation, enablement, and observed use."
+        : "Omarchy did not provide sufficient observed-use evidence."
+      serviceSummary = serviceArtifactAdoptionReceiptPath === ""
+        ? "No adoption evidence was retained."
+        : "Local adoption evidence: " + serviceArtifactAdoptionReceiptPath
       return
     }
     if (value.schemaVersion === "limitless.omarchy-publication-result/0.1") {

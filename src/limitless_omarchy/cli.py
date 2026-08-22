@@ -16,7 +16,9 @@ from .mcp_server import serve
 from .provider import serve_general_provider
 from .service import (
     activate_managed_service,
+    enable_managed_plugin,
     inspect_managed_service,
+    install_managed_plugin_disabled,
     manage_publication,
     prepare_managed_plugin_review,
     query_managed_service,
@@ -186,6 +188,60 @@ def _service_artifact_review_input() -> Path:
     return Path(configured)
 
 
+def _service_artifact_install_input() -> Path:
+    raw = sys.stdin.buffer.readline(MAX_SERVICE_INPUT_BYTES + 1)
+    if not raw or len(raw) > MAX_SERVICE_INPUT_BYTES or not raw.endswith(b"\n"):
+        raise AdapterError("artifact installation input must be one bounded JSON line on stdin")
+    try:
+        value = strict_json_loads(raw.decode("utf-8"))
+    except (UnicodeError, ValueError) as error:
+        raise AdapterError("artifact installation input is invalid") from error
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"schemaVersion", "handoffStatePath"}
+        or value.get("schemaVersion") != "limitless.omarchy-artifact-install-input/0.1"
+    ):
+        raise AdapterError("artifact installation input has an unsupported shape")
+    configured = value["handoffStatePath"]
+    if (
+        not isinstance(configured, str)
+        or not configured
+        or len(configured) > 4096
+        or "\x00" in configured
+        or not Path(configured).is_absolute()
+        or ".." in Path(configured).parts
+    ):
+        raise AdapterError("artifact handoff state path is invalid")
+    return Path(configured)
+
+
+def _service_artifact_enable_input() -> Path:
+    raw = sys.stdin.buffer.readline(MAX_SERVICE_INPUT_BYTES + 1)
+    if not raw or len(raw) > MAX_SERVICE_INPUT_BYTES or not raw.endswith(b"\n"):
+        raise AdapterError("artifact enablement input must be one bounded JSON line on stdin")
+    try:
+        value = strict_json_loads(raw.decode("utf-8"))
+    except (UnicodeError, ValueError) as error:
+        raise AdapterError("artifact enablement input is invalid") from error
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"schemaVersion", "installationStatePath"}
+        or value.get("schemaVersion") != "limitless.omarchy-artifact-enable-input/0.1"
+    ):
+        raise AdapterError("artifact enablement input has an unsupported shape")
+    configured = value["installationStatePath"]
+    if (
+        not isinstance(configured, str)
+        or not configured
+        or len(configured) > 4096
+        or "\x00" in configured
+        or not Path(configured).is_absolute()
+        or ".." in Path(configured).parts
+    ):
+        raise AdapterError("artifact installation state path is invalid")
+    return Path(configured)
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -256,6 +312,14 @@ def _parser() -> argparse.ArgumentParser:
         "service-artifact-review",
         help="materialize and natively validate one staged exact Omarchy bundle",
     )
+    subparsers.add_parser(
+        "service-artifact-install",
+        help="install one reviewed exact Omarchy bundle while keeping it disabled",
+    )
+    subparsers.add_parser(
+        "service-artifact-enable",
+        help="explicitly enable one signed installation and capture observed use",
+    )
     return parser
 
 
@@ -306,6 +370,10 @@ def main() -> None:
             _print(stage_managed_artifact(_service_artifact_stage_input()))
         elif args.command == "service-artifact-review":
             _print(prepare_managed_plugin_review(_service_artifact_review_input()))
+        elif args.command == "service-artifact-install":
+            _print(install_managed_plugin_disabled(_service_artifact_install_input()))
+        elif args.command == "service-artifact-enable":
+            _print(enable_managed_plugin(_service_artifact_enable_input()))
     except AdapterError as error:
         print(f"limitless-omarchy: {error}", file=sys.stderr)
         raise SystemExit(2) from error
