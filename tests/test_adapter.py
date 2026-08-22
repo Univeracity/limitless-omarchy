@@ -23,6 +23,7 @@ from limitless_library.service_connector import (
     ServiceUnavailableError,
 )
 from limitless_library.service_identity import InstallationSigner
+
 from limitless_omarchy import service as service_module
 from limitless_omarchy.adapter import (
     AdapterError,
