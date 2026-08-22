@@ -11,11 +11,11 @@ This initial adapter targets Omarchy's Quattro plugin contract:
 - native reload or discovery through the Omarchy shell rescan command.
 
 The contract is pinned in CI to Omarchy commit
-30f7a06090dc20dd1a4a8d0c99bfb8e2370df2ec. Update that pin only after
+ed7bae4ac5a570e9df307486e0202fdafcc6ee24. Update that pin only after
 checking changes to the plugin manifest, lifecycle, and validator behavior.
 
 The Python package also pins the public Limitless Library core to commit
-0a400fd27eac71fceb900c09efef784acb8a2f75. Update it only after running this
+7aece03bfbf68eb558e602de3bb50205593d8b52. Update it only after running this
 adapter's full test, package, and distribution checks against the candidate
 core revision.
 

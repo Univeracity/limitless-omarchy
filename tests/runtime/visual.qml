@@ -14,13 +14,13 @@ ShellRoot {
   property var panelState: QtObject {
     property bool commandRunning: false
     property bool runtimeReady: true
-    property bool serviceExpanded: true
-    property bool serviceReady: true
+    property bool serviceExpanded: false
+    property bool serviceReady: false
     property bool serviceArtifactStageAvailable: true
     property bool serviceArtifactReviewAvailable: true
     property bool serviceArtifactInstallAvailable: false
     property bool serviceArtifactEnableAvailable: false
-    property bool publicationExpanded: true
+    property bool publicationExpanded: false
     property bool publicationPolicyAccepted: false
     property bool publicationPolicyReady: true
     property bool publicationWithdrawalArmed: false
@@ -84,7 +84,7 @@ ShellRoot {
   }
 
   Timer {
-    id: topTimer
+    id: previewTimer
     interval: 1000
     running: true
     repeat: false
@@ -94,6 +94,24 @@ ShellRoot {
         Qt.quit()
         return
       }
+      contents.item.grabToImage(function(result) {
+        root.previewSaved = result.saveToFile(root.outputDirectory + "/preview.png")
+        root.panelState.serviceExpanded = true
+        root.panelState.serviceReady = true
+        root.panelState.publicationExpanded = true
+        topTimer.start()
+      }, Qt.size(480, 680))
+    }
+  }
+
+  property bool previewSaved: false
+  property bool topSaved: false
+
+  Timer {
+    id: topTimer
+    interval: 250
+    repeat: false
+    onTriggered: {
       contents.item.grabToImage(function(result) {
         var topSaved = result.saveToFile(root.outputDirectory + "/service-top.png")
         var scroll = contents.item.children.length > 0 ? contents.item.children[0] : null
@@ -105,8 +123,6 @@ ShellRoot {
     }
   }
 
-  property bool topSaved: false
-
   Timer {
     id: bottomTimer
     interval: 250
@@ -115,7 +131,8 @@ ShellRoot {
       contents.item.grabToImage(function(result) {
         var bottomSaved = result.saveToFile(root.outputDirectory + "/service-bottom.png")
         resultFile.setText(JSON.stringify({
-          ok: root.topSaved && bottomSaved,
+          ok: root.previewSaved && root.topSaved && bottomSaved,
+          previewSaved: root.previewSaved,
           topSaved: root.topSaved,
           bottomSaved: bottomSaved
         }))

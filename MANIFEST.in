@@ -3,6 +3,7 @@ include NOTICE
 include README.md
 include SECURITY.md
 include manifest.json
+include preview.png
 include pyproject.toml
 recursive-include .github *.py *.yml
 recursive-include docs *.md
@@ -11,5 +12,6 @@ recursive-include plugin *.qml
 include scripts/limitless-omarchy-runtime
 recursive-include scripts smoke-omarchy-panel
 recursive-include scripts *.py
+recursive-include scripts *.mjs
 recursive-include tests *.py
 recursive-include tests/runtime Dockerfile *.qml

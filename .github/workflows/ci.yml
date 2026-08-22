@@ -85,8 +85,23 @@ jobs:
         run: |
           git init "$RUNNER_TEMP/omarchy-contract"
           git -C "$RUNNER_TEMP/omarchy-contract" remote add origin https://github.com/basecamp/omarchy.git
-          git -C "$RUNNER_TEMP/omarchy-contract" fetch --depth=1 origin 30f7a06090dc20dd1a4a8d0c99bfb8e2370df2ec
+          git -C "$RUNNER_TEMP/omarchy-contract" fetch --depth=1 origin ed7bae4ac5a570e9df307486e0202fdafcc6ee24
           git -C "$RUNNER_TEMP/omarchy-contract" checkout --detach FETCH_HEAD
       - name: Validate the distributable plugin
         run: |
           "$RUNNER_TEMP/omarchy-contract/bin/omarchy-plugin-validate" .
+      - name: Set up marketplace scanner runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.0.0
+        with:
+          node-version: 24
+      - name: Fetch the pinned marketplace baseline
+        run: |
+          git init "$RUNNER_TEMP/omarchy-marketplace"
+          git -C "$RUNNER_TEMP/omarchy-marketplace" remote add origin https://github.com/HANCORE-linux/omarchy-plugin-marketplace.git
+          git -C "$RUNNER_TEMP/omarchy-marketplace" fetch --depth=1 origin aa6d4be1b21ccb57cacd5f67d3ffd1f765c97237
+          git -C "$RUNNER_TEMP/omarchy-marketplace" checkout --detach FETCH_HEAD
+      - name: Verify marketplace baseline disposition
+        run: |
+          node scripts/verify-marketplace-baseline.mjs \
+            --marketplace="$RUNNER_TEMP/omarchy-marketplace" \
+            --repository=.

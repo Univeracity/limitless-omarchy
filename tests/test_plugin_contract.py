@@ -20,6 +20,7 @@ def test_manifest_is_a_valid_third_party_panel_contract() -> None:
     assert manifest["schemaVersion"] == 1
     assert manifest["id"] == "univeracity.limitless-library"
     assert not manifest["id"].startswith("omarchy.")
+    assert manifest["license"] == "Apache-2.0"
     assert manifest["kinds"] == ["panel", "bar-widget"]
     entry_point = ROOT / manifest["entryPoints"]["panel"]
     assert entry_point.is_file()
@@ -27,6 +28,21 @@ def test_manifest_is_a_valid_third_party_panel_contract() -> None:
     widget = ROOT / manifest["entryPoints"]["barWidget"]
     assert widget.is_file()
     assert manifest["barWidget"]["defaultSection"] == "right"
+
+
+def test_marketplace_submission_materials_are_complete() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    submission = (ROOT / "docs" / "MARKETPLACE-SUBMISSION.md").read_text(encoding="utf-8")
+    baseline = ROOT / "scripts" / "verify-marketplace-baseline.mjs"
+    preview = (ROOT / "preview.png").read_bytes()
+
+    assert "omarchy plugin remove univeracity.limitless-library" in readme
+    assert "Marketplace verification" in readme
+    assert "review-required" in submission
+    assert "package-manager" in submission
+    assert "approved-and-verified" in submission
+    assert baseline.is_file()
+    assert preview.startswith(b"\x89PNG\r\n\x1a\n")
 
 
 def test_package_pins_a_public_limitless_library_revision() -> None:
@@ -211,6 +227,7 @@ def test_visual_harness_renders_the_production_scroll_surface() -> None:
     harness = (ROOT / "tests" / "runtime" / "visual.qml").read_text(encoding="utf-8")
 
     assert "source: root.panelContentsPath" in harness
+    assert '"/preview.png"' in harness
     assert '"/service-top.png"' in harness
     assert '"/service-bottom.png"' in harness
     assert "scroll.contentY = Math.max(0, scroll.contentHeight - scroll.height)" in harness

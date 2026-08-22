@@ -276,6 +276,35 @@ The Quattro contract supported by this repository is documented in
 For a real-session validation path, use the non-mutating
 [runtime smoke test](docs/RUNTIME-SMOKE.md).
 
+## Remove it
+
+Use **Setup › Plugins › Remove** or Omarchy's native command:
+
+    omarchy plugin remove univeracity.limitless-library
+
+Omarchy disables the plugin before removing its reviewed Git checkout. The
+panel-owned runtime and local state are owner data, so plugin removal does not
+silently delete them. After confirming the exact configured XDG data path, an
+owner who wants a complete cleanup can remove its `limitless-omarchy`
+directory separately.
+
+## Marketplace verification
+
+The repository carries the root manifest, README, Apache-2.0 license,
+installation and removal directions, explicit dependencies, native validator
+gate, and static-baseline preflight required for an omarchyplugins.com
+submission. The current marketplace baseline finds no blocking pattern. It
+requests maintainer review for one disclosed capability: the explicit
+**Install local runtime** action uses Python's package installer only inside
+`XDG_DATA_HOME/limitless-omarchy/runtime`.
+
+That action is not an install hook, does not run while Omarchy clones or
+validates the plugin, does not request elevated access, and does not modify the
+system Python. It installs this reviewed checkout plus the public Limitless
+Library dependency pinned to a full Git commit. See the paste-ready
+[marketplace submission notes](docs/MARKETPLACE-SUBMISSION.md) for the exact
+review boundary and cutover sequence.
+
 ## Repository boundary
 
 | Repository | Responsibility |
@@ -286,7 +315,8 @@ For a real-session validation path, use the non-mutating
 
 ## Status
 
-Initial local-first implementation with one-action, release-pinned official
-service activation and an advanced alternate-profile connector. No live
-official identity is invented by this source tree, and the panel intentionally
-exposes no capture or sharing control.
+Pre-release local-first implementation with one-action, release-pinned
+official-service activation, reviewed exact-component adoption, explicit
+public contribution, and an advanced alternate-profile connector. No live
+official identity is invented by this source tree. Every capture, publication,
+installation, enablement, and withdrawal action remains explicit.

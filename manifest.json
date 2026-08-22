@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "author": "Univeracity",
   "description": "Local-first verified reuse for Omarchy and general agent work",
+  "license": "Apache-2.0",
   "kinds": [
     "panel",
     "bar-widget"
