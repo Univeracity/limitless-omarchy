@@ -15,7 +15,7 @@ ed7bae4ac5a570e9df307486e0202fdafcc6ee24. Update that pin only after
 checking changes to the plugin manifest, lifecycle, and validator behavior.
 
 The Python package also pins the public Limitless Library core to commit
-bf3b62e78272ac6b8414cd414a5658c56d8d5497. Update it only after running this
+2a0ae99ea522478c430f174240f5cf8cc6234694. Update it only after running this
 adapter's full test, package, and distribution checks against the candidate
 core revision.
 
