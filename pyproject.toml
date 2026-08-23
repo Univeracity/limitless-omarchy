@@ -12,7 +12,7 @@ license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 authors = [{name = "Limitless Library"}]
 dependencies = [
-  "limitless-library @ git+https://github.com/univeracity/limitlesslibrary.git@2a0ae99ea522478c430f174240f5cf8cc6234694",
+  "limitless-library @ git+https://github.com/univeracity/limitlesslibrary.git@f54dcce90b9dcc76a768fa5e907e78fdb2177287",
 ]
 keywords = ["agents", "omarchy", "quickshell", "reuse", "verification"]
 classifiers = [
