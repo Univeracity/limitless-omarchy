@@ -14,14 +14,18 @@ Confirm all of the following manually:
 2. Setup does not request elevated access or alter the system Python.
 3. The included example returns a source-free method.
 4. An owner can paste an absolute catalog path and query it from the panel.
-5. Closing with Escape clears the panel.
-6. No desktop customization was installed, enabled, updated, removed, or
+5. If Omarchy has a supported default agent, setup reports its local MCP
+   connection without replacing unrelated configured servers.
+6. Selecting an unsupported optional agent produces a local connection report
+   while leaving the supported default connection usable.
+7. Closing with Escape clears the panel.
+8. No desktop customization was installed, enabled, updated, removed, or
    shared by the panel.
 
 If the installed release includes official service trust material, also confirm:
 
-1. Expanding **Use Limitless service (optional)** makes no request by itself.
-2. **Enable official service** requires no profile path, account, or API key
+1. Expanding **Connect to Limitless Library service** makes no request by itself.
+2. Its connection action requires no profile path, account, or API key
    and establishes the private installation identity automatically.
 3. **Inspect trust boundary** verifies the activation without sending an
    objective.

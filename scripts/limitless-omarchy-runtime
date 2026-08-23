@@ -20,13 +20,16 @@ fail() {
 
 usage() {
   cat <<'USAGE'
-Usage: limitless-omarchy-runtime ACTION --plugin-root PATH [--catalog PATH] [--profile PATH] [--omarchy-release VALUE]
+Usage: limitless-omarchy-runtime ACTION --plugin-root PATH [--catalog PATH] [--profile PATH] [--omarchy-release VALUE] [--additional-agent ID]
 
 Actions:
   status      report whether the panel-owned local runtime is available
   setup       explicitly create or update the isolated local runtime
   query       query a selected local catalog before an Omarchy customization
   query-demo  query the checked-in local example catalog
+  agent-status show the current Omarchy default and local MCP connection state
+  agent-reconcile connect the default agent and selected additional agents to local MCP
+  agent-disconnect remove only plugin-owned local MCP connections
   service-activate enable the release-pinned official service
   service-inspect  verify the enabled official service
   service-query    read one managed query as a bounded JSON line from stdin
@@ -49,6 +52,7 @@ plugin_root=""
 catalog=""
 profile=""
 omarchy_release=""
+additional_agents=()
 while (($#)); do
   case "$1" in
     --plugin-root)
@@ -71,6 +75,11 @@ while (($#)); do
       omarchy_release=$2
       shift 2
       ;;
+    --additional-agent)
+      (($# >= 2)) || fail "--additional-agent requires an Omarchy agent id"
+      additional_agents+=("$2")
+      shift 2
+      ;;
     --help|-h)
       usage
       exit 0
@@ -82,7 +91,7 @@ while (($#)); do
 done
 
 case "$action" in
-  status|setup|query|query-demo|service-activate|service-inspect|service-query|service-publication|service-artifact-stage|service-artifact-review|service-artifact-install|service-artifact-enable) ;;
+  status|setup|query|query-demo|agent-status|agent-reconcile|agent-disconnect|service-activate|service-inspect|service-query|service-publication|service-artifact-stage|service-artifact-review|service-artifact-install|service-artifact-enable) ;;
   *)
     fail "unrecognized action: $action"
     ;;
@@ -103,6 +112,7 @@ fi
 runtime_root=$XDG_DATA_HOME/limitless-omarchy
 runtime=$runtime_root/runtime
 runtime_cli=$runtime/bin/limitless-omarchy
+agent_state_dir=$runtime_root/agent-connection
 
 runtime_available() {
   [[ -d $runtime && ! -L $runtime && -x $runtime_cli && ! -L $runtime_cli ]]
@@ -143,7 +153,10 @@ case "$action" in
     ;;
   setup)
     setup_runtime
-    exec "$runtime_cli" status
+    exec "$runtime_cli" agent-reconcile \
+      --state-dir "$agent_state_dir" \
+      --runtime-cli "$runtime_cli" \
+      --catalog "$plugin_root/examples/catalog"
     ;;
   query)
     runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
@@ -153,6 +166,22 @@ case "$action" in
   query-demo)
     runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
     exec "$runtime_cli" query --catalog "$plugin_root/examples/catalog"
+    ;;
+  agent-status)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    exec "$runtime_cli" agent-status --state-dir "$agent_state_dir"
+    ;;
+  agent-reconcile)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    agent_arguments=(agent-reconcile --state-dir "$agent_state_dir" --runtime-cli "$runtime_cli" --catalog "$plugin_root/examples/catalog")
+    for agent in "${additional_agents[@]}"; do
+      agent_arguments+=(--additional-agent "$agent")
+    done
+    exec "$runtime_cli" "${agent_arguments[@]}"
+    ;;
+  agent-disconnect)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    exec "$runtime_cli" agent-disconnect --state-dir "$agent_state_dir"
     ;;
   service-activate)
     runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }

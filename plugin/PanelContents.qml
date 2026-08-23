@@ -207,13 +207,136 @@ Item {
       opacity: 0.65
     }
 
+    Text {
+      visible: root.panel && root.panel.runtimeReady
+      width: 440
+      text: "Agent connection"
+      color: Color.popups.text
+      font.family: Style.font.family
+      font.pixelSize: Style.font.bodySmall
+      font.bold: true
+    }
+
+    Text {
+      visible: root.panel && root.panel.runtimeReady
+      width: 440
+      wrapMode: Text.Wrap
+      text: root.panel ? root.panel.agentSummary : ""
+      color: Color.popups.text
+      opacity: 0.72
+      font.family: Style.font.family
+      font.pixelSize: Style.font.bodySmall
+    }
+
+    Row {
+      visible: root.panel && root.panel.runtimeReady
+      width: 440
+      spacing: 8
+
+      Button {
+        width: 216
+        height: Math.max(34, Style.spacing.controlHeight)
+        text: root.panel && root.panel.defaultAgent !== ""
+          ? "Connect " + root.panel.agentLabel(root.panel.defaultAgent)
+          : "Choose Omarchy default"
+        bordered: true
+        focusable: true
+        enabled: root.panel && root.panel.defaultAgent !== "" && !root.commandRunning
+        onClicked: if (root.panel) root.panel.reconcileAgents()
+      }
+
+      Button {
+        width: 216
+        height: Math.max(34, Style.spacing.controlHeight)
+        text: "Refresh agent status"
+        bordered: true
+        focusable: true
+        enabled: root.panel && !root.commandRunning
+        onClicked: if (root.panel) root.panel.refreshAgentStatus()
+      }
+    }
+
+    Text {
+      visible: root.panel && root.panel.runtimeReady
+      width: 440
+      text: "Optional additional agents"
+      color: Color.popups.text
+      opacity: 0.78
+      font.family: Style.font.family
+      font.pixelSize: Style.font.caption
+    }
+
+    Flow {
+      visible: root.panel && root.panel.runtimeReady
+      width: 440
+      spacing: 8
+
+      Repeater {
+        model: root.panel ? root.panel.agentOptions : []
+
+        delegate: Button {
+          required property var modelData
+          visible: root.panel && String(modelData.id) !== root.panel.defaultAgent
+          height: Math.max(30, Style.spacing.controlHeight - 4)
+          text: root.panel && root.panel.hasAdditionalAgent(modelData.id)
+            ? "✓ " + String(modelData.label)
+            : String(modelData.label)
+          bordered: true
+          focusable: true
+          enabled: root.panel && !root.commandRunning
+          onClicked: if (root.panel) root.panel.toggleAdditionalAgent(modelData.id)
+        }
+      }
+    }
+
+    Button {
+      visible: root.panel && root.panel.runtimeReady && root.panel.additionalAgentIds.length > 0
+      width: 440
+      height: Math.max(34, Style.spacing.controlHeight)
+      text: "Apply selected agent connections"
+      bordered: true
+      focusable: true
+      enabled: !root.commandRunning
+      onClicked: if (root.panel) root.panel.reconcileAgents()
+    }
+
+    Text {
+      visible: root.panel && root.panel.runtimeReady && root.panel.agentReportPath !== ""
+      width: 440
+      wrapMode: Text.WrapAnywhere
+      text: root.panel ? "Connection report: " + root.panel.agentReportPath : ""
+      color: Color.popups.text
+      opacity: 0.52
+      font.family: Style.font.family
+      font.pixelSize: Style.font.caption
+    }
+
+    Button {
+      visible: root.panel && root.panel.runtimeReady
+      width: 440
+      height: Math.max(34, Style.spacing.controlHeight)
+      text: "Disconnect plugin-owned agent connections"
+      bordered: true
+      focusable: true
+      enabled: !root.commandRunning
+      onClicked: if (root.panel) root.panel.disconnectAgents()
+    }
+
+    Rectangle {
+      visible: root.panel && root.panel.runtimeReady
+      width: 440
+      height: 1
+      color: Color.popups.border
+      opacity: 0.65
+    }
+
     Button {
       visible: root.panel && root.panel.runtimeReady
       width: 440
       height: Math.max(34, Style.spacing.controlHeight)
       text: root.panel && root.panel.serviceExpanded
-        ? "Hide Limitless service"
-        : "Use Limitless service (optional)"
+        ? "Hide Limitless Library service"
+        : "Connect to Limitless Library service"
       bordered: true
       focusable: true
       enabled: !root.commandRunning
@@ -236,8 +359,8 @@ Item {
       width: 440
       height: Math.max(34, Style.spacing.controlHeight)
       text: root.panel && root.panel.serviceReady
-        ? "Official service enabled"
-        : "Enable official service"
+        ? "Limitless Library service connected"
+        : "Connect to Limitless Library service"
       bordered: true
       focusable: true
       enabled: !root.commandRunning

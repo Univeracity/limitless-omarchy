@@ -32,8 +32,9 @@ runtime and optional companion CLI:
 
 - derives only a minimal receiver profile;
 - does not inspect the user's plugin list, arbitrary desktop configuration,
-  prompts, screenshots, command history, or agent workspace;
-- does not silently install or enable a plugin; and
+  prompts, screenshots, command history, or agent workspace (except the
+  host-owned default-agent setting during an explicit agent connection);
+- does not silently install or enable a desktop plugin; and
 - leaves decisions and evidence local.
 
 The managed Limitless implementation remains outside this repository. A
@@ -48,11 +49,16 @@ Add and enable the reviewed repository through **Setup › Plugins**. The
 Limitless Library `L` button will appear in the right side of the bar. Click
 it, then select **Install local runtime**. The panel creates its own isolated
 runtime beneath your XDG data directory; it does not alter the system Python,
-require an agent, configure MCP, or connect to a service.
+require an agent-side setup step before use, or connect to a service.
 
 The first explicit setup needs Python 3 and network access to install the
-pinned public Library dependency into that isolated runtime. Once complete,
-the panel itself is the normal way to use Limitless Omarchy:
+pinned public Library dependency into that isolated runtime. That same explicit
+setup action also makes Limitless available to the agent currently chosen under
+**Setup › Defaults › Agent**, when its current client has a verified MCP
+configuration path. The panel creates only its own named local MCP entry and
+verifies it before treating it as connected. It never replaces another server
+or rewrites an unrelated agent setting. Once complete, the panel itself is the
+normal way to use Limitless Omarchy:
 
 1. Click **Try included example** to inspect a fully local source-free method.
 2. Paste an absolute path to an owner-controlled local catalog.
@@ -64,10 +70,19 @@ button press, query the catalog you select, and show a component, method, or
 safe abstention. A compatible managed exact component exposes later, separate
 review, install-disabled, and enable actions; none is inferred from the query.
 
-## Optional managed service from the panel
+The **Agent connection** section shows the current Omarchy default, lets an
+owner select additional Omarchy agents, and reconciles each selected target
+independently. Codex, Claude Code, and Grok use their own native MCP commands;
+Antigravity CLI uses its documented standalone MCP profile. A selected client
+without a verified adapter is skipped rather than guessed, while other selected
+clients continue; the panel displays the local report path with the reason.
+**Disconnect plugin-owned agent connections** removes only entries whose exact
+server command still matches the plugin-recorded descriptor.
 
-Local use is always available without a service connection. Open **Use
-Limitless service (optional)** and select **Enable official service**. That one
+## Connect to Limitless Library service (optional)
+
+Local use is always available without a service connection. Open **Connect to
+Limitless Library service**, then select its connection action. That one
 action fetches the exact release-pinned, credential-free profile and verifies
 the service identity, original root, root-key history, policy digest, protocol,
 and result keys before saving activation state. It then creates one private,
@@ -123,9 +138,10 @@ Limitless once the plugin has been reviewed and enabled.
 ## Optional command-line control
 
 The CLI remains available for development, automation, diagnostics, and MCP
-clients; it is not a prerequisite for the panel. Install it directly when you
-want that lower-level control. Its pinned public Limitless Library dependency
-is fetched automatically:
+clients; it is not a prerequisite for the panel. The panel owns ordinary
+runtime and default-agent connection setup. Install the CLI directly only when
+you want lower-level control. Its pinned public Limitless Library dependency is
+fetched automatically:
 
     python3 -m pip install .
 
@@ -213,7 +229,30 @@ stays local until the owner deliberately places it in a different catalog or
 sharing scope. For exact components, pass --root with the directory containing
 the declared source files; methods default to the draft's directory.
 
-## Connect an agent locally
+## Agent connection and lower-level MCP control
+
+For normal Omarchy use, select **Install local runtime** from the panel.
+Limitless then targets the agent currently selected in Omarchy's **Setup ›
+Defaults › Agent** setting, without asking the user to find or edit its MCP
+configuration. Additional agents remain optional panel selections. Each result
+is saved in a local connection report; partial success remains useful.
+
+The companion commands are available for diagnostics or automation. They are
+not required for panel use:
+
+    limitless-omarchy agent-status \
+      --state-dir /absolute/path/to/limitless-omarchy/agent-connection
+
+    limitless-omarchy agent-reconcile \
+      --state-dir /absolute/path/to/limitless-omarchy/agent-connection \
+      --runtime-cli /absolute/path/to/limitless-omarchy \
+      --catalog /absolute/path/to/local-catalog \
+      --additional-agent claude
+
+The state directory holds no prompt, catalog contents, or service credential.
+It records only the plugin-owned MCP descriptor and its latest local report.
+
+For an explicitly configured lower-level Omarchy-aware MCP server:
 
 Start the Omarchy-aware MCP server:
 

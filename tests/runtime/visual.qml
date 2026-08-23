@@ -24,6 +24,21 @@ ShellRoot {
     property bool publicationPolicyAccepted: false
     property bool publicationPolicyReady: true
     property bool publicationWithdrawalArmed: false
+    property string defaultAgent: "codex"
+    property var additionalAgentIds: ["claude"]
+    property var agentOptions: [
+      { id: "agy", label: "Antigravity" },
+      { id: "claude", label: "Claude Code" },
+      { id: "codex", label: "Codex" },
+      { id: "copilot", label: "GitHub Copilot" },
+      { id: "crush", label: "Crush" },
+      { id: "grok", label: "Grok" },
+      { id: "omp", label: "Oh My Pi" },
+      { id: "opencode", label: "OpenCode" },
+      { id: "pi", label: "Pi" }
+    ]
+    property string agentSummary: "Default: Codex · local MCP connected."
+    property string agentReportPath: "/home/user/.local/share/limitless-omarchy/agent-connection/connection-report.json"
     property string headline: "Local Library ready"
     property string detail: "Local reuse remains available. Service discovery is an explicit opt-in."
     property string selectionReference: ""
@@ -46,6 +61,17 @@ ShellRoot {
     property string publicationPolicySummary: "publication-2026-08 · sha256:3333333333333333333333333333333333333333333333333333333333333333"
 
     function installRuntime() {}
+    function agentLabel(agentId) {
+      for (var index = 0; index < agentOptions.length; index += 1) {
+        if (String(agentOptions[index].id) === String(agentId)) return String(agentOptions[index].label)
+      }
+      return String(agentId)
+    }
+    function hasAdditionalAgent(agentId) { return additionalAgentIds.indexOf(String(agentId)) >= 0 }
+    function toggleAdditionalAgent(agentId) {}
+    function refreshAgentStatus() {}
+    function reconcileAgents() {}
+    function disconnectAgents() {}
     function queryExample() {}
     function queryCatalog() {}
     function activateService() {}

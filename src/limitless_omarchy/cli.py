@@ -12,6 +12,12 @@ from typing import Any
 from limitless_library.contracts import strict_json_loads
 
 from .adapter import AdapterError, query_local_catalog, seal_local_capsule, status, validate_plugin
+from .agent_connection import (
+    AgentConnectionError,
+    agent_connection_status,
+    disconnect_agent_connections,
+    reconcile_agent_connections,
+)
 from .mcp_server import serve
 from .provider import serve_general_provider
 from .service import (
@@ -274,6 +280,27 @@ def _parser() -> argparse.ArgumentParser:
     )
     provider.add_argument("--catalog", type=Path, required=True)
 
+    agent_status = subparsers.add_parser(
+        "agent-status",
+        help="inspect the Omarchy-default agent and plugin-owned MCP connections",
+    )
+    agent_status.add_argument("--state-dir", type=Path, required=True)
+
+    agent_reconcile = subparsers.add_parser(
+        "agent-reconcile",
+        help="connect Omarchy's default agent and selected additional agents to local MCP",
+    )
+    agent_reconcile.add_argument("--state-dir", type=Path, required=True)
+    agent_reconcile.add_argument("--runtime-cli", type=Path, required=True)
+    agent_reconcile.add_argument("--catalog", type=Path, required=True)
+    agent_reconcile.add_argument("--additional-agent", action="append", default=[])
+
+    agent_disconnect = subparsers.add_parser(
+        "agent-disconnect",
+        help="remove only plugin-owned local MCP connections",
+    )
+    agent_disconnect.add_argument("--state-dir", type=Path, required=True)
+
     subparsers.add_parser(
         "service-activate",
         help="enable the release-pinned official service after verifying its authority",
@@ -349,6 +376,19 @@ def main() -> None:
             serve(args.catalog, omarchy_release=args.omarchy_release)
         elif args.command == "provider":
             serve_general_provider(args.catalog)
+        elif args.command == "agent-status":
+            _print(agent_connection_status(args.state_dir))
+        elif args.command == "agent-reconcile":
+            _print(
+                reconcile_agent_connections(
+                    args.state_dir,
+                    runtime_cli=args.runtime_cli,
+                    catalog=args.catalog,
+                    additional_agents=args.additional_agent,
+                )
+            )
+        elif args.command == "agent-disconnect":
+            _print(disconnect_agent_connections(args.state_dir))
         elif args.command == "service-activate":
             _print(activate_managed_service())
         elif args.command == "service-inspect":
@@ -374,7 +414,7 @@ def main() -> None:
             _print(install_managed_plugin_disabled(_service_artifact_install_input()))
         elif args.command == "service-artifact-enable":
             _print(enable_managed_plugin(_service_artifact_enable_input()))
-    except AdapterError as error:
+    except (AdapterError, AgentConnectionError) as error:
         print(f"limitless-omarchy: {error}", file=sys.stderr)
         raise SystemExit(2) from error
 

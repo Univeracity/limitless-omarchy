@@ -39,6 +39,13 @@ Use this text in the submission's **Maintainer notes** field:
 > access, publication, exact-component installation, and enablement are
 > separate explicit user actions. A build with no official service locator
 > remains local-only.
+>
+> After that same explicit setup action, the panel may configure one named
+> local MCP entry for the agent selected under Omarchy's own Default Agent
+> setting. It uses the current agent client's verified MCP surface, verifies
+> the exact local command/arguments, and keeps a local ownership descriptor.
+> It never overwrites an existing entry of that name; unavailable or unsupported
+> agents are reported locally without blocking the rest of setup.
 
 ## Exact baseline result
 
@@ -73,8 +80,9 @@ commit as Verified.
 | Python 3.11+ with virtual-environment support | Required only after the user selects **Install local runtime** or directly chooses the optional CLI. |
 | Limitless Library | Public Git dependency pinned to a full 40-character commit in `pyproject.toml`. |
 | Initial network use | Omarchy clones this repository; the explicit runtime setup may fetch the pinned dependency and Python dependencies. |
-| Optional managed network use | Begins only after **Enable official service** verifies release-pinned trust and the user later chooses a service action. |
+| Optional managed network use | Begins only after the explicit **Connect to Limitless Library service** action verifies release-pinned trust and the user later chooses a service action. |
 | Local data | Runtime under the configured XDG data directory; owner-selected catalogs and owner-only state remain local unless separately published. |
+| Agent configuration | The explicit setup or connection action may add one `limitless-omarchy` user-scoped local MCP server for the current Omarchy default and owner-selected additional agents. Only verified agent-client adapters are used; collisions and modified entries are reported and preserved. |
 | Privilege | No `sudo`, `pkexec`, system-Python modification, service unit, sudoers policy, or passwordless privilege path. |
 | Desktop mutation | A query never changes the desktop. Reviewed exact-component installation and enablement are separate actions and use Omarchy's native lifecycle. |
 

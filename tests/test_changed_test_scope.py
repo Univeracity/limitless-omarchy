@@ -25,6 +25,14 @@ def test_service_change_selects_adapter_tests_and_package_gate() -> None:
     assert result["omarchyContractRequired"] is False
 
 
+def test_agent_connection_change_selects_its_focused_tests_and_package_gate() -> None:
+    result = plan("src/limitless_omarchy/agent_connection.py")
+
+    assert result["mode"] == "targeted"
+    assert result["tests"] == ["tests/test_agent_connection.py"]
+    assert result["packageGateRequired"] is True
+
+
 def test_qml_change_selects_plugin_and_visual_contracts() -> None:
     result = plan("plugin/PanelContents.qml")
 

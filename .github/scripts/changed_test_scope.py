@@ -12,6 +12,7 @@ from pathlib import Path, PurePosixPath
 
 ALL_TESTS = (
     "tests/test_adapter.py",
+    "tests/test_agent_connection.py",
     "tests/test_changed_test_scope.py",
     "tests/test_plugin_contract.py",
 )
@@ -78,6 +79,10 @@ def plan_changes(paths: Iterable[str]) -> dict[str, object]:
             tests.add("tests/test_plugin_contract.py")
             package_gate = True
             reasons.append(f"panel runtime changed: {raw}")
+        elif raw == "src/limitless_omarchy/agent_connection.py":
+            tests.add("tests/test_agent_connection.py")
+            package_gate = True
+            reasons.append("agent connection adapter changed")
         elif raw.startswith("src/limitless_omarchy/") and path.suffix == ".py":
             tests.add("tests/test_adapter.py")
             package_gate = True

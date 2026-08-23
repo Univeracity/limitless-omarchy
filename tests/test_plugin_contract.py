@@ -49,7 +49,7 @@ def test_package_pins_a_public_limitless_library_revision() -> None:
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
     assert "limitless-library @ git+https://github.com/univeracity/limitlesslibrary.git@" in project
-    assert "7aece03bfbf68eb558e602de3bb50205593d8b52" in project
+    assert "bf3b62e78272ac6b8414cd414a5658c56d8d5497" in project
 
 
 def test_cli_keeps_local_queries_bounded_to_omarchy_private_reuse() -> None:
@@ -68,6 +68,9 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "function close()" in panel
     assert '"/scripts/limitless-omarchy-runtime"' in panel
     assert "function installRuntime()" in panel
+    assert "function refreshAgentStatus()" in panel
+    assert "function reconcileAgents()" in panel
+    assert "function disconnectAgents()" in panel
     assert "function queryCatalog()" in panel
     assert "function queryExample()" in panel
     assert "function activateService()" in panel
@@ -90,8 +93,11 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "Math.min(content.implicitHeight + 40, 680)" in contents
     assert "TextInput" in contents
     assert "Try included example" in contents
-    assert "Use Limitless service (optional)" in contents
-    assert "Enable official service" in contents
+    assert "Agent connection" in contents
+    assert "Optional additional agents" in contents
+    assert "Apply selected agent connections" in contents
+    assert "Disconnect plugin-owned agent connections" in contents
+    assert "Connect to Limitless Library service" in contents
     assert "Inspect trust boundary" in contents
     assert "Query managed service" in contents
     assert "Prepare verified plugin review" in contents
@@ -141,6 +147,9 @@ def test_panel_runtime_is_syntax_valid_and_never_targets_system_python() -> None
     assert "service-artifact-review" in text
     assert "service-artifact-install" in text
     assert "service-artifact-enable" in text
+    assert "agent-status" in text
+    assert "agent-reconcile" in text
+    assert "agent-disconnect" in text
     assert "--objective" not in text
     assert "LIMITLESS_SERVICE_TOKEN" not in text
 
@@ -210,6 +219,55 @@ printf '%s\n' '{"schemaVersion":"limitless.omarchy-publication-result/0.1","oper
     assert json.loads(captured_input.read_text(encoding="utf-8")) == payload
     assert "/home/user/reviewed" not in captured_arguments.read_text(encoding="utf-8")
     assert json.loads(completed.stdout)["operation"] == "publish"
+
+
+def test_panel_runtime_reconciles_the_default_and_optional_agents_through_its_owned_cli(tmp_path: Path) -> None:
+    runtime = ROOT / "scripts" / "limitless-omarchy-runtime"
+    data_home = tmp_path / "xdg-data"
+    runtime_bin = data_home / "limitless-omarchy" / "runtime" / "bin"
+    runtime_bin.mkdir(parents=True)
+    captured_arguments = tmp_path / "arguments.txt"
+    _mock_command(
+        runtime_bin,
+        "limitless-omarchy",
+        """#!/bin/sh
+printf '%s\\n' "$*" > "$CAPTURED_ARGUMENTS"
+printf '%s\\n' '{"schemaVersion":"limitless.omarchy-agent-connection-report/0.1","results":[]}'
+""",
+    )
+    environment = {
+        **os.environ,
+        "XDG_DATA_HOME": str(data_home),
+        "CAPTURED_ARGUMENTS": str(captured_arguments),
+    }
+
+    completed = subprocess.run(
+        [
+            str(runtime),
+            "agent-reconcile",
+            "--plugin-root",
+            str(ROOT),
+            "--additional-agent",
+            "claude",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=environment,
+    )
+
+    arguments = captured_arguments.read_text(encoding="utf-8").strip().split()
+    assert arguments[:7] == [
+        "agent-reconcile",
+        "--state-dir",
+        str(data_home / "limitless-omarchy" / "agent-connection"),
+        "--runtime-cli",
+        str(runtime_bin / "limitless-omarchy"),
+        "--catalog",
+        str(ROOT / "examples" / "catalog"),
+    ]
+    assert arguments[7:] == ["--additional-agent", "claude"]
+    assert json.loads(completed.stdout)["schemaVersion"] == "limitless.omarchy-agent-connection-report/0.1"
 
 
 def test_runtime_smoke_harness_is_syntax_valid_and_non_mutating() -> None:

@@ -43,13 +43,27 @@ The Quattro panel is a standalone third-party panel with a paired bar widget,
 so an enabled plugin has a visible UI entry point. It owns the normal local
 setup and query flow: an explicit panel action creates an isolated runtime
 under `XDG_DATA_HOME` and installs this reviewed adapter plus its pinned public
-Library dependency there. It never modifies the system Python, requires MCP
-configuration, or makes a service connection.
+Library dependency there. The same explicit action reconciles a local MCP entry
+for the agent Omarchy currently selects as its default. It never modifies the
+system Python or makes a service connection.
+
+Agent connection is independent per target. The panel reads the host-owned
+default-agent selection, treats it as the first target, and allows the owner to
+add optional Omarchy agent IDs. Codex, Claude Code, and Grok adapters delegate
+to their own MCP commands; the Antigravity CLI adapter uses its documented
+standalone user profile. Every adapter verifies the resulting exact descriptor.
+The local state file identifies only a plugin-owned server name and exact
+command/args; on a later reconcile or disconnect, a changed or colliding entry
+is reported and left untouched. Unsupported or unavailable clients produce a
+local report without preventing other targets from being connected. No prompt,
+workspace content, catalog contents, or service credential appears in that
+state.
 
 The panel invokes a bundled runtime script rather than assuming the companion
 CLI exists on `PATH`. The script accepts an explicit plugin-root argument,
 requires an absolute XDG data directory, and exposes `status`, `setup`,
-`query`, `query-demo`, `service-activate`, `service-inspect`, `service-query`,
+`query`, `query-demo`, `agent-status`, `agent-reconcile`, `agent-disconnect`,
+`service-activate`, `service-inspect`, `service-query`,
 `service-artifact-stage`, `service-artifact-review`,
 `service-artifact-install`, `service-artifact-enable`, and
 `service-publication` actions.

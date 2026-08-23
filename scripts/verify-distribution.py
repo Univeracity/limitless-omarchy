@@ -30,6 +30,7 @@ REQUIRED = {
     "examples/catalog/reading-focus-method/capsule.json",
     "src/limitless_omarchy/__init__.py",
     "src/limitless_omarchy/adapter.py",
+    "src/limitless_omarchy/agent_connection.py",
     "src/limitless_omarchy/cli.py",
     "src/limitless_omarchy/mcp_server.py",
     "src/limitless_omarchy/provider.py",

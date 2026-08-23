@@ -38,6 +38,21 @@ Item {
   property string publicationPolicyDigest: ""
   property string publicationPolicySummary: "Inspect the trust boundary to load the current public publication policy."
   property bool publicationWithdrawalArmed: false
+  property string defaultAgent: ""
+  property var additionalAgentIds: []
+  property var agentOptions: [
+    { id: "agy", label: "Antigravity" },
+    { id: "claude", label: "Claude Code" },
+    { id: "codex", label: "Codex" },
+    { id: "copilot", label: "GitHub Copilot" },
+    { id: "crush", label: "Crush" },
+    { id: "grok", label: "Grok" },
+    { id: "omp", label: "Oh My Pi" },
+    { id: "opencode", label: "OpenCode" },
+    { id: "pi", label: "Pi" }
+  ]
+  property string agentSummary: "The current Omarchy default will be connected after local setup."
+  property string agentReportPath: ""
   property string publicationSummary: "No public contribution has been submitted."
   property string publicationOperation: ""
   property bool runtimeReady: false
@@ -101,6 +116,42 @@ Item {
 
   function installRuntime() {
     runRuntime("setup", [])
+  }
+
+  function agentLabel(agentId) {
+    for (var index = 0; index < agentOptions.length; index += 1) {
+      if (String(agentOptions[index].id) === String(agentId)) return String(agentOptions[index].label)
+    }
+    return String(agentId)
+  }
+
+  function hasAdditionalAgent(agentId) {
+    return additionalAgentIds.indexOf(String(agentId)) >= 0
+  }
+
+  function toggleAdditionalAgent(agentId) {
+    var target = String(agentId)
+    if (target === defaultAgent) return
+    var next = additionalAgentIds.slice(0)
+    var position = next.indexOf(target)
+    if (position >= 0) next.splice(position, 1)
+    else next.push(target)
+    additionalAgentIds = next
+  }
+
+  function refreshAgentStatus() {
+    if (runtimeReady) runRuntime("agent-status", [])
+  }
+
+  function reconcileAgents() {
+    var arguments = []
+    for (var index = 0; index < additionalAgentIds.length; index += 1)
+      arguments = arguments.concat(["--additional-agent", String(additionalAgentIds[index])])
+    runRuntime("agent-reconcile", arguments)
+  }
+
+  function disconnectAgents() {
+    runRuntime("agent-disconnect", [])
   }
 
   function queryCatalog() {
@@ -281,6 +332,54 @@ Item {
       detail = runtimeReady
         ? "Choose a local catalog below, inspect the included example, or explicitly open the optional service section."
         : "Create an isolated local runtime to begin. Nothing will be shared."
+      selectionReference = ""
+      return
+    }
+    if (value.schemaVersion === "limitless.omarchy-agent-connection-status/0.1") {
+      runtimeReady = true
+      defaultAgent = value.defaultAgent === null || value.defaultAgent === undefined ? "" : String(value.defaultAgent)
+      additionalAgentIds = Array.isArray(value.additionalAgents) ? value.additionalAgents.map(String) : []
+      agentReportPath = String(value.reportPath || "")
+      var connections = Array.isArray(value.connections) ? value.connections : []
+      var defaultStatus = ""
+      for (var connectionIndex = 0; connectionIndex < connections.length; connectionIndex += 1) {
+        var connection = connections[connectionIndex] || {}
+        if (String(connection.agent || "") === defaultAgent) {
+          defaultStatus = String(connection.status || "")
+          break
+        }
+      }
+      if (defaultAgent === "") {
+        agentSummary = "Choose a default agent in Omarchy Setup › Defaults › Agent, then return here to connect it."
+      } else if (defaultStatus === "connected") {
+        agentSummary = "Default: " + agentLabel(defaultAgent) + " · local MCP connected."
+      } else if (defaultStatus === "available") {
+        agentSummary = "Default: " + agentLabel(defaultAgent) + " · MCP setup is not yet supported by its current client."
+      } else {
+        agentSummary = "Default: " + agentLabel(defaultAgent) + " · local MCP is not connected. Select Connect to retry."
+      }
+      return
+    }
+    if (value.schemaVersion === "limitless.omarchy-agent-connection-report/0.1") {
+      runtimeReady = true
+      defaultAgent = value.defaultAgent === null || value.defaultAgent === undefined ? "" : String(value.defaultAgent)
+      additionalAgentIds = Array.isArray(value.additionalAgents) ? value.additionalAgents.map(String) : []
+      agentReportPath = String(value.reportPath || "")
+      var results = Array.isArray(value.results) ? value.results : []
+      var connectedCount = 0
+      var attentionCount = 0
+      for (var resultIndex = 0; resultIndex < results.length; resultIndex += 1) {
+        var result = results[resultIndex] || {}
+        if (String(result.status || "") === "connected") connectedCount += 1
+        else if (String(result.status || "") !== "disconnected") attentionCount += 1
+      }
+      headline = value.action === "disconnect" ? "Agent connections updated" : "Limitless ready for agents"
+      detail = connectedCount > 0
+        ? String(connectedCount) + " selected agent connection(s) are ready."
+        : "Local Library setup completed. Review the agent connection result below."
+      agentSummary = attentionCount > 0
+        ? "Some agent targets need attention. Details are saved locally."
+        : "Selected agent connections are ready."
       selectionReference = ""
       return
     }
@@ -486,11 +585,14 @@ Item {
     }
     onExited: function(exitCode) {
       if (!root.opened) return
+      var completedOperation = root.operation
       if (exitCode === 0) root.applyResult(root.commandOutput)
       else root.errorText = root.commandError !== "" ? root.commandError : "The local runtime is unavailable."
       root.pendingInput = ""
       root.operation = ""
       root.publicationOperation = ""
+      if (completedOperation === "status" && root.runtimeReady)
+        Qt.callLater(function() { if (root.opened) root.refreshAgentStatus() })
     }
   }
 
