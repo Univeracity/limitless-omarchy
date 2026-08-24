@@ -81,10 +81,13 @@ configuration path. Existing MCP entries are never overwritten.
 4. The **Agents** tab shows the result and lets the owner opt additional agents
    in. A collision or unsupported client is reported without changing it.
 
-The connected agent receives two deliberately small tools:
+The connected agent receives three deliberately small tools through that one
+connection:
 
+- `limitless_query_before_work` — use the standard Limitless receiver envelope
+  for general work, including work unrelated to Omarchy;
 - `omarchy_query_before_customization` — call before material Omarchy work with
-  the concise objective already in context;
+  only the concise objective already in context; and
 - `limitless_register_method` — call after useful work when the saved owner
   policy says it should be retained.
 
@@ -177,24 +180,24 @@ others.
 **Disconnect plugin-owned agent connections** removes only entries whose exact
 command still matches the descriptor created by this plugin.
 
-Owners who want the same installation to support non-Omarchy work can opt into
-the separate general provider. It exposes the standard read-only
-`limitless_query_before_work` tool against an owner-selected catalog without
-deriving an Omarchy profile or merging catalogs automatically.
+The normal plugin-owned MCP connection supports both Omarchy customization and
+general Limitless work. The separate `provider` command remains available only
+as advanced, generic-only control for an owner-selected catalog; it is not a
+second package or a required second connection.
 
 ## Optional command-line control
 
 The UI is the normal path. For diagnostics, automation, or direct MCP setup:
 
 ```bash
-python3 -m pip install .
+runtime_cli="${XDG_DATA_HOME:?}/limitless-omarchy/runtime/bin/limitless-omarchy"
 
-limitless-omarchy status
-limitless-omarchy query --catalog ./catalog \
+"$runtime_cli" status
+"$runtime_cli" query --catalog ./catalog \
   < /path/to/ephemeral-local-query-input.json
-limitless-omarchy mcp --catalog ./catalog
-limitless-omarchy provider --catalog /absolute/path/to/general-catalog
-limitless-omarchy validate-plugin .
+"$runtime_cli" mcp --catalog ./catalog
+"$runtime_cli" provider --catalog /absolute/path/to/general-catalog
+"$runtime_cli" validate-plugin .
 ```
 
 Managed queries and contribution operations also accept bounded JSON on stdin.
@@ -206,7 +209,8 @@ they could reveal user work.
 For offline development against a local Limitless Library checkout:
 
 ```bash
-python3 -m pip install /path/to/limitlesslibrary
+python3 -m pip install --no-index --no-deps \
+  runtime/wheels/limitless_library-0.1.0a0-py3-none-any.whl
 python3 -m pip install --no-deps -e .
 ```
 
@@ -231,6 +235,11 @@ directories afterward.
 - Plugin installation does not run a custom install hook.
 - Runtime setup is an explicit UI action and does not cross an elevated
   privilege boundary, create a system service, or mutate the system Python.
+- Before setup touches the isolated runtime, a standard-library verifier checks
+  the complete dependency lock and both release wheels against committed
+  SHA-256 digests. Setup accepts only hash-approved binary dependencies and
+  installs the reviewed local wheels without an index, dependency resolution,
+  Git, or a package build.
 - Local query derives a minimal receiver profile and does not crawl arbitrary
   desktop configuration, prompts, screenshots, command history, or workspaces.
 - Exact bytes are installed without overwrite and enabled only after separate
@@ -250,8 +259,10 @@ marketplace static-baseline preflight.
 The current baseline reports no findings and one disclosed review capability:
 `package-manager`. That capability exists because the explicit **Install local
 runtime** action invokes Python's package installer inside the panel-owned
-virtual environment. It is not an Omarchy install hook, does not request
-elevated access, and does not alter the system Python.
+virtual environment. The complete graph is version- and hash-locked, binary
+only, and the adapter and core are reviewed local wheels. Setup runs no package
+build or mutable Git dependency. It is not an Omarchy install hook, does not
+request elevated access, and does not alter the system Python.
 
 See [marketplace submission notes](docs/MARKETPLACE-SUBMISSION.md) for the exact
 review boundary and [runtime smoke testing](docs/RUNTIME-SMOKE.md) for the
@@ -260,7 +271,10 @@ real-session validation path.
 ## Develop and verify
 
 ```bash
+python3 -m pip install --no-index --no-deps \
+  runtime/wheels/limitless_library-0.1.0a0-py3-none-any.whl
 python3 -m pip install -e '.[dev]'
+python3 scripts/verify-runtime-bundle.py --root .
 pytest
 ruff check src tests .github/scripts
 ruff format --check src tests .github/scripts
@@ -268,9 +282,9 @@ bandit -r -q src
 omarchy plugin validate .
 ```
 
-The public Limitless Library dependency is pinned to a full Git commit. CI also
-pins the Omarchy validator and marketplace baseline so a moving upstream cannot
-silently redefine a passing release.
+The bundled public Limitless Library wheel is tied to a full Git commit and an
+exact digest. CI also pins the Omarchy validator and marketplace baseline so a
+moving upstream cannot silently redefine a passing release.
 
 ## Project boundary
 

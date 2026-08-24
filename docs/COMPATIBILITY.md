@@ -14,26 +14,28 @@ The contract is pinned in CI to Omarchy commit
 ed7bae4ac5a570e9df307486e0202fdafcc6ee24. Update that pin only after
 checking changes to the plugin manifest, lifecycle, and validator behavior.
 
-The Python package also pins the public Limitless Library core to commit
-bbd8d312151e01503c85bce40ebbb3fa22aee66d. Update it only after running this
-adapter's full test, package, and distribution checks against the candidate
-core revision.
+The reviewed runtime bundle ties the public Limitless Library core wheel to
+commit bbd8d312151e01503c85bce40ebbb3fa22aee66d and an exact SHA-256 digest.
+Update it only after reproducible wheel builds and this adapter's full test,
+package, distribution, and bundle-verification checks pass.
 
 ## UI-owned runtime
 
 The panel's explicit setup action requires the normal Omarchy desktop
 environment to expose an absolute `XDG_DATA_HOME` and Python 3 with virtual
-environment support. It installs the reviewed adapter and pinned core only
+environment support. It verifies a complete hash lock, accepts binary
+dependencies only, and installs the reviewed adapter and pinned core wheels only
 into `XDG_DATA_HOME/limitless-omarchy/runtime`; no system-Python installation,
-or privileged action is required. The same explicit setup can configure the
+package build, Git checkout, or privileged action is required. The same explicit setup can configure the
 current Omarchy default agent through a verified MCP adapter. Native client
 commands are used when available; Antigravity CLI uses its documented global
 MCP profile. It never edits a guessed configuration path, overwrites an
 existing `limitless-omarchy` server, or blocks local use when a selected agent
 is unavailable.
 
-The first setup may use network access to resolve the pinned public core and
-its Python dependencies. Local queries after setup use the runtime-owned
+The first setup may use network access to fetch exact hash-approved binary
+Python dependencies. The core and adapter wheels are shipped in the reviewed
+plugin checkout and installed without index access. Local queries after setup use the runtime-owned
 catalog and require no network or managed service. Managed queries occur only
 after the owner explicitly connects from **Library** and submits an objective.
 

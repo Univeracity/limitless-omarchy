@@ -91,6 +91,15 @@ def test_build_contract_change_fails_safe_to_full_suite() -> None:
     assert result["omarchyContractRequired"] is True
 
 
+def test_runtime_bundle_change_selects_release_contract_without_expanding_unnecessarily() -> None:
+    result = plan("runtime/requirements.lock")
+
+    assert result["mode"] == "targeted"
+    assert result["tests"] == ["tests/test_plugin_contract.py"]
+    assert result["packageGateRequired"] is True
+    assert result["omarchyContractRequired"] is True
+
+
 def test_unknown_path_fails_safe_and_output_is_serializable() -> None:
     result = plan("operations/new-runtime.conf")
 

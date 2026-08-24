@@ -49,11 +49,17 @@ def test_marketplace_submission_materials_are_complete() -> None:
     assert univeracity_logo.startswith(b"\x89PNG\r\n\x1a\n")
 
 
-def test_package_pins_a_public_limitless_library_revision() -> None:
+def test_runtime_bundle_pins_a_public_limitless_library_revision() -> None:
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    bundle = json.loads((ROOT / "runtime" / "bundle.json").read_text(encoding="utf-8"))
+    core = bundle["packages"][0]
 
-    assert "limitless-library @ git+https://github.com/univeracity/limitlesslibrary.git@" in project
-    assert "bbd8d312151e01503c85bce40ebbb3fa22aee66d" in project
+    assert "git+" not in project
+    assert core["name"] == "limitless-library"
+    assert core["source"] == {
+        "repository": "https://github.com/Univeracity/limitlesslibrary",
+        "commit": "bbd8d312151e01503c85bce40ebbb3fa22aee66d",
+    }
 
 
 def test_cli_keeps_local_queries_bounded_to_omarchy_private_reuse() -> None:
@@ -188,7 +194,11 @@ def test_bar_widget_opens_the_panel_through_omarchy() -> None:
     widget = (ROOT / "plugin" / "BarWidget.qml").read_text(encoding="utf-8")
 
     assert 'moduleName: "univeracity.limitless-library"' in widget
-    assert "WidgetButton" in widget
+    assert "BarIconButton" in widget
+    assert "iconComponent: segmentedMark" in widget
+    assert 'text: "<"' not in widget
+    assert widget.count("row:") == 5
+    assert "Color.accent" in widget
     assert "omarchy-shell shell toggle univeracity.limitless-library" in widget
 
 
@@ -203,7 +213,12 @@ def test_panel_runtime_is_syntax_valid_and_never_targets_system_python() -> None
     assert "sudo" not in text
     assert '"$python_command" -m venv "$runtime"' in text
     assert 'mv -- "$stage/venv" "$runtime"' not in text
-    assert "stage_runtime_source" in text
+    assert "stage_runtime_source" not in text
+    assert "verify-runtime-bundle.py" in text
+    assert "--only-binary=:all: --require-hashes" in text
+    assert '"$plugin_root/runtime/requirements.lock"' in text
+    assert "--no-index --no-deps --force-reinstall" in text
+    assert '"${bundle_wheels[@]}"' in text
     assert 'pip install \\\n      --disable-pip-version-check --no-input --upgrade "$plugin_root"' not in text
     assert 'pip install \\\n    --disable-pip-version-check --no-input "$plugin_root"' not in text
     assert "service-inspect" in text
@@ -221,16 +236,19 @@ def test_panel_runtime_is_syntax_valid_and_never_targets_system_python() -> None
     assert "LIMITLESS_SERVICE_TOKEN" not in text
 
 
-def test_panel_runtime_builds_from_an_xdg_snapshot_without_mutating_the_watched_plugin_tree(tmp_path: Path) -> None:
+def test_panel_runtime_installs_the_verified_bundle_without_mutating_the_watched_plugin_tree(tmp_path: Path) -> None:
     runtime = ROOT / "scripts" / "limitless-omarchy-runtime"
     data_home = tmp_path / "xdg-data"
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
-    pip_source_log = tmp_path / "pip-source.txt"
+    pip_call_log = tmp_path / "pip-calls.txt"
     fake_python = fake_bin / "python3"
     fake_python.write_text(
         """#!/bin/bash
 set -euo pipefail
+if [[ ${1:-} == */verify-runtime-bundle.py ]]; then
+  exec "$REAL_PYTHON" "$@"
+fi
 if [[ ${1:-} == "-m" && ${2:-} == "venv" ]]; then
   runtime=$3
   mkdir -p "$runtime/bin"
@@ -242,7 +260,7 @@ CLI
   chmod +x "$runtime/bin/python" "$runtime/bin/limitless-omarchy"
   exit 0
 fi
-printf '%s\n' "${@: -1}" >"$PIP_SOURCE_LOG"
+printf '%s\n' "$*" >>"$PIP_CALL_LOG"
 """,
         encoding="utf-8",
     )
@@ -252,7 +270,8 @@ printf '%s\n' "${@: -1}" >"$PIP_SOURCE_LOG"
         **os.environ,
         "PATH": f"{fake_bin}:{os.environ['PATH']}",
         "XDG_DATA_HOME": str(data_home),
-        "PIP_SOURCE_LOG": str(pip_source_log),
+        "PIP_CALL_LOG": str(pip_call_log),
+        "REAL_PYTHON": sys.executable,
     }
 
     completed = subprocess.run(
@@ -263,12 +282,44 @@ printf '%s\n' "${@: -1}" >"$PIP_SOURCE_LOG"
         env=environment,
     )
 
-    pip_source = Path(pip_source_log.read_text(encoding="utf-8").strip())
-    assert pip_source.parent.parent == data_home / "limitless-omarchy"
-    assert pip_source.name == "package"
-    assert not pip_source.exists()
+    calls = pip_call_log.read_text(encoding="utf-8").splitlines()
+    assert len(calls) == 2
+    assert "--only-binary=:all: --require-hashes --force-reinstall --requirement" in calls[0]
+    assert str(ROOT / "runtime" / "requirements.lock") in calls[0]
+    assert "--no-index --no-deps --force-reinstall" in calls[1]
+    assert str(ROOT / "runtime" / "wheels" / "limitless_library-0.1.0a0-py3-none-any.whl") in calls[1]
+    assert str(ROOT / "runtime" / "wheels" / "limitless_omarchy-0.1.1-py3-none-any.whl") in calls[1]
     assert json.loads(completed.stdout)["status"] == "configured"
     assert sorted(path.relative_to(ROOT) for path in ROOT.rglob("*") if path.is_file()) == before
+
+
+def test_runtime_bundle_is_complete_and_rejects_digest_tampering(tmp_path: Path) -> None:
+    verifier = ROOT / "scripts" / "verify-runtime-bundle.py"
+    valid = subprocess.run(
+        [sys.executable, str(verifier), "--root", str(ROOT)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert valid.returncode == 0, valid.stderr
+    assert "2 wheels and one hash-locked dependency graph" in valid.stdout
+
+    candidate = tmp_path / "candidate"
+    shutil.copytree(ROOT / "runtime", candidate / "runtime")
+    shutil.copytree(ROOT / "src" / "limitless_omarchy", candidate / "src" / "limitless_omarchy")
+    manifest_path = candidate / "runtime" / "bundle.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["packages"][0]["sha256"] = "0" * 64
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    tampered = subprocess.run(
+        [sys.executable, str(verifier), "--root", str(candidate)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert tampered.returncode == 2
+    assert "SHA-256 mismatch" in tampered.stderr
 
 
 def test_panel_runtime_reports_setup_required_without_writing_to_the_system_python(tmp_path: Path) -> None:

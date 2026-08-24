@@ -511,10 +511,11 @@ def test_mcp_registration_requires_only_name_and_steps_and_returns_no_contents(
     )
     assert tools is not None
     assert [item["name"] for item in tools["result"]["tools"]] == [
+        mcp_server.GENERAL_TOOL_NAME,
         "omarchy_query_before_customization",
         REGISTER_METHOD_TOOL_NAME,
     ]
-    assert tools["result"]["tools"][0]["inputSchema"]["required"] == ["objective"]
+    assert tools["result"]["tools"][1]["inputSchema"]["required"] == ["objective"]
     response = handle_message(
         catalog,
         {

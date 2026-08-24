@@ -1056,6 +1056,28 @@ def test_mcp_supports_modern_stateless_tool_calls(tmp_path: Path) -> None:
     assert response["result"]["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "limitless-omarchy"
 
 
+def test_configured_mcp_exposes_general_limitless_reuse_and_counts_it(tmp_path: Path) -> None:
+    activity = tmp_path / "activity.json"
+    response = handle_message(
+        GENERAL_CATALOG,
+        {
+            "jsonrpc": "2.0",
+            "id": "general-query",
+            "method": "tools/call",
+            "params": {
+                "name": GENERAL_TOOL_NAME,
+                "arguments": load_json(GENERAL_REQUEST),
+                "_meta": modern_metadata(client_name="test", client_version="1"),
+            },
+        },
+        activity_path=activity,
+    )
+
+    assert response is not None
+    assert response["result"]["structuredContent"]["decision"] == "reuse"
+    assert json.loads(activity.read_text(encoding="utf-8"))["queries"]["general"] == 1
+
+
 def test_general_provider_wraps_the_core_server_with_the_current_interpreter(tmp_path: Path) -> None:
     catalog = tmp_path / "general-catalog"
     activity = tmp_path / "activity.json"

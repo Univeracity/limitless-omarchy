@@ -28,6 +28,7 @@ from limitless_library.contracts import canonical_json_bytes
 
 from .adapter import AdapterError
 from .service import inspect_managed_service, manage_publication
+from .version import VERSION
 
 STATE_SCHEMA_VERSION = "limitless.method-sharing-state/0.1"
 SYNC_RESULT_SCHEMA_VERSION = "limitless.method-sharing-sync/0.1"
@@ -401,7 +402,7 @@ def _publication_material(
             "platform": platform.system().lower() or "unknown",
             "architecture": platform.machine().lower() or "unknown",
             "runtime": "limitless-omarchy",
-            "version": "0.1.0",
+            "version": VERSION,
             "interfaces": interfaces,
         },
         "evidenceDigests": [record["contentDigest"]],

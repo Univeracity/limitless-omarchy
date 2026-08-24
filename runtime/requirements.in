@@ -1,0 +1,6 @@
+# Runtime dependencies for the vendored Limitless Library core.
+#
+# Regenerate requirements.lock with Python 3.12 and pip-tools. Production
+# setup installs only binary distributions whose hashes appear in that lock.
+cryptography==50.0.0
+jsonschema==4.26.0

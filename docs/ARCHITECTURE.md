@@ -62,8 +62,12 @@ immutable output creation to Limitless Library and never scans a workspace.
 The Quattro panel is a standalone third-party panel with a paired bar widget,
 so an enabled plugin has a visible UI entry point. It owns the normal local
 setup and query flow: an explicit panel action creates an isolated runtime
-under `XDG_DATA_HOME` and installs this reviewed adapter plus its pinned public
-Library dependency there. The same explicit action reconciles a local MCP entry
+under `XDG_DATA_HOME` and installs the reviewed adapter and public Library core
+there. Before changing that runtime, setup verifies the committed lock and both
+pure-Python wheels against their release-manifest SHA-256 digests. It installs
+the complete dependency graph with hashes required and binary distributions
+only, then installs the local wheels with no index or dependency resolution.
+No Git checkout or package build runs during user setup. The same explicit action reconciles a local MCP entry
 for the agent Omarchy currently selects as its default. It never modifies the
 system Python or makes a service connection.
 
@@ -87,8 +91,9 @@ requires an absolute XDG data directory, and exposes `status`, `setup`,
 `contribution-sync`, `contribution-transition`, `service-activate`, `service-inspect`, `service-query`,
 `service-artifact-stage`, `service-artifact-review`,
 `service-artifact-install`, `service-artifact-enable`, and
-`service-publication` actions.
-Before Python builds the adapter, the setup action copies only the reviewed package inputs into a temporary directory beneath the XDG runtime root. Build metadata and other installer output therefore never mutate Omarchy's recursively watched plugin checkout or trigger a desktop hot reload; the temporary source is removed after either a successful setup or an error.
+`service-publication` actions. Installer output is confined to the XDG runtime,
+so setup never mutates Omarchy's recursively watched plugin checkout or
+triggers a desktop hot reload.
 Service activation is one explicit UI action and uses only trust material
 pinned in the installed public Library release; ordinary users never manage a
 profile path or API key. Setup is never automatic. The runtime owns one default
@@ -125,12 +130,14 @@ decision, exact bundle, installed path, native runtime projection, and observed
 invocation. Full-bar replacement is excluded because it has no ordinary
 disabled-to-enabled transition and changes the desktop's controlling bar.
 
-The companion also provides an Omarchy-aware local MCP query tool. It derives
-the same minimal receiver profile before calling the generic Library decision
-layer. The required objective is concise and already present in the calling
-agent's context; arbitrary configuration is not admitted. Agents may also
-provide an explicitly known Omarchy release. Task kind and tenant scope are
-fixed to Omarchy customization and private reuse.
+The normal companion MCP surface provides three tools through one plugin-owned
+connection. `limitless_query_before_work` accepts the standard core receiver
+envelope for general work. `omarchy_query_before_customization` derives the
+minimal Omarchy receiver profile from a concise objective already present in
+the calling agent's context. `limitless_register_method` records compact useful
+methods under saved owner policy. The convenience query may accept an explicitly
+known Omarchy release; its task kind and tenant scope remain fixed to Omarchy
+customization and private reuse.
 
 ## Contribution lifecycle
 
@@ -157,20 +164,19 @@ a new revision waits for that result and, when available, binds the prior public
 release as its parent and superseded release. Superseded revisions cannot be
 moved back into circulation.
 
-## Optional general provider
+## Advanced generic-only provider
 
 `limitless-omarchy provider --catalog …` is a separate, explicit local MCP
-entry point for an owner who wants this installation to provide general
-Limitless reuse as well. It wraps the pinned Limitless Library stdio server
+entry point for an owner who wants a generic-only connection against another
+catalog. It wraps the pinned Limitless Library stdio server
 only to increment an aggregate outcome counter; the generic tool, framing,
 schemas, session behavior, and policy remain owned by the core rather than
 copied into this adapter.
 
 This entry point does not call the Omarchy profile adapter, inspect desktop
-state, or combine catalogs. It exists to eliminate duplicate package and MCP
-configuration for an owner who has deliberately chosen a general local
-catalog. The default `mcp` entry point remains bounded to private
-Omarchy-customization requests.
+state, or combine catalogs. The default `mcp` entry point already supports
+both general and Omarchy-specific queries; the separate provider is optional
+lower-level control, not a prerequisite for general reuse.
 
 ## Local activity projection
 

@@ -124,41 +124,8 @@ elif [[ -n ${HOME:-} && $HOME == /* ]]; then
 else
   settings_path=$runtime_root/settings.json
 fi
-setup_source=""
-install_source=""
-
-cleanup_setup_source() {
-  [[ -n $setup_source ]] || return 0
-  [[ $setup_source == "$runtime_root"/.setup-source.* && -d $setup_source && ! -L $setup_source ]] \
-    || fail "refusing to remove an unexpected setup source path"
-  rm -rf -- "$setup_source"
-  setup_source=""
-}
-
-trap cleanup_setup_source EXIT
-
 runtime_available() {
   [[ -d $runtime && ! -L $runtime && -x $runtime_cli && ! -L $runtime_cli ]]
-}
-
-stage_runtime_source() {
-  local source_package=$plugin_root/src/limitless_omarchy
-
-  [[ -d $source_package && ! -L $source_package ]] || fail "the runtime package source is unavailable"
-  [[ -z $(find "$source_package" -type l -print -quit) ]] \
-    || fail "the runtime package source must not contain symbolic links"
-
-  setup_source=$(mktemp -d "$runtime_root/.setup-source.XXXXXX")
-  install_source=$setup_source/package
-  mkdir -p -- "$install_source/src"
-
-  local required_file
-  for required_file in pyproject.toml README.md LICENSE NOTICE; do
-    [[ -f $plugin_root/$required_file && ! -L $plugin_root/$required_file ]] \
-      || fail "the runtime package is missing $required_file"
-    cp -- "$plugin_root/$required_file" "$install_source/$required_file"
-  done
-  cp -R -- "$source_package" "$install_source/src/limitless_omarchy"
 }
 
 sync_seed_catalog() {
@@ -187,32 +154,40 @@ sync_seed_catalog() {
 }
 
 setup_runtime() {
-  local python_command
+  local python_command bundle_output
+  local -a bundle_wheels
 
   command -v python3 >/dev/null || fail "Python 3 is required to create the isolated local runtime"
   python_command=$(command -v python3)
+  [[ -f $plugin_root/scripts/verify-runtime-bundle.py && ! -L $plugin_root/scripts/verify-runtime-bundle.py ]] \
+    || fail "the runtime bundle verifier is unavailable"
+  bundle_output=$(
+    "$python_command" "$plugin_root/scripts/verify-runtime-bundle.py" \
+      --root "$plugin_root" --print-wheel-paths0 | tr '\0' '\n'
+  ) || fail "the release-pinned runtime bundle did not verify"
+  mapfile -t bundle_wheels <<<"$bundle_output"
+  [[ ${#bundle_wheels[@]} == 2 ]] || fail "the runtime bundle did not provide exactly two wheels"
+
   if [[ -e $runtime_root || -L $runtime_root ]]; then
     [[ -d $runtime_root && ! -L $runtime_root ]] || fail "the runtime root is not a directory"
   else
     mkdir -p -- "$runtime_root"
   fi
-  stage_runtime_source
 
-  if runtime_available; then
-    PIP_DISABLE_PIP_VERSION_CHECK=1 "$runtime/bin/python" -m pip install \
-      --disable-pip-version-check --no-input --upgrade "$install_source" >&2
-    cleanup_setup_source
-    return
-  fi
-
-  if [[ -e $runtime || -L $runtime ]]; then
+  if ! runtime_available && [[ -e $runtime || -L $runtime ]]; then
     [[ -d $runtime && ! -L $runtime ]] || fail "the incomplete runtime path is not a directory"
     rm -rf -- "$runtime"
   fi
-  "$python_command" -m venv "$runtime"
+  if ! runtime_available; then
+    "$python_command" -m venv "$runtime"
+  fi
+
   PIP_DISABLE_PIP_VERSION_CHECK=1 "$runtime/bin/python" -m pip install \
-    --disable-pip-version-check --no-input "$install_source" >&2
-  cleanup_setup_source
+    --disable-pip-version-check --no-input --only-binary=:all: --require-hashes \
+    --force-reinstall --requirement "$plugin_root/runtime/requirements.lock" >&2
+  PIP_DISABLE_PIP_VERSION_CHECK=1 "$runtime/bin/python" -m pip install \
+    --disable-pip-version-check --no-input --no-index --no-deps --force-reinstall \
+    "${bundle_wheels[@]}" >&2
 }
 
 case "$action" in

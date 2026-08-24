@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "univeracity.limitless-library",
   "name": "Limitless Library",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Univeracity",
   "description": "Local-first verified reuse for Omarchy and general agent work",
   "license": "Apache-2.0",

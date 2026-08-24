@@ -24,6 +24,7 @@ FULL_PATHS = {
     "MANIFEST.in",
     "pyproject.toml",
     "scripts/verify-distribution.py",
+    "scripts/verify-runtime-bundle.py",
 }
 
 
@@ -81,6 +82,11 @@ def plan_changes(paths: Iterable[str]) -> dict[str, object]:
             tests.add("tests/test_plugin_contract.py")
             package_gate = True
             reasons.append(f"panel runtime changed: {raw}")
+        elif raw.startswith("runtime/"):
+            tests.add("tests/test_plugin_contract.py")
+            package_gate = True
+            omarchy_contract = True
+            reasons.append(f"reviewed runtime bundle changed: {raw}")
         elif raw == "src/limitless_omarchy/agent_connection.py":
             tests.add("tests/test_agent_connection.py")
             package_gate = True

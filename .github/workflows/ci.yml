@@ -32,7 +32,10 @@ jobs:
       - name: Install development tools and the pinned public core
         run: |
           python -m pip install --upgrade pip==26.2.1
-          python -m pip install --upgrade 'setuptools>=83.0.0'
+          python -m pip install --upgrade setuptools==83.0.0
+          python scripts/verify-runtime-bundle.py --root .
+          python -m pip install --only-binary=:all: --require-hashes --requirement runtime/requirements.lock
+          python -m pip install --no-index --no-deps runtime/wheels/limitless_library-*.whl
           python -m pip install -e ".[dev]"
       - name: Run change-aware test scope
         env:
@@ -61,6 +64,12 @@ jobs:
         run: bandit -r -q src
       - name: Dependency vulnerability scan
         run: pip-audit --local --progress-spinner off
+      - name: Exercise the reviewed panel runtime setup
+        if: matrix.python-version == '3.11'
+        run: |
+          runtime_data="$(mktemp -d)"
+          XDG_DATA_HOME="$runtime_data" scripts/limitless-omarchy-runtime setup --plugin-root . > /tmp/limitless-omarchy-runtime-setup.json
+          "$runtime_data/limitless-omarchy/runtime/bin/python" -c "import limitless_library, limitless_omarchy; assert limitless_omarchy.__version__ == '0.1.1'"
       - name: Build source distribution
         if: matrix.python-version == '3.11'
         run: python -m build --sdist --outdir dist
@@ -71,7 +80,9 @@ jobs:
         if: matrix.python-version == '3.11'
         run: |
           python -m venv /tmp/limitless-omarchy-sdist
-          /tmp/limitless-omarchy-sdist/bin/pip install dist/limitless_omarchy-*.tar.gz
+          /tmp/limitless-omarchy-sdist/bin/pip install --only-binary=:all: --require-hashes --requirement runtime/requirements.lock
+          /tmp/limitless-omarchy-sdist/bin/pip install --no-index --no-deps runtime/wheels/limitless_library-*.whl
+          /tmp/limitless-omarchy-sdist/bin/pip install --no-deps dist/limitless_omarchy-*.tar.gz
           printf '%s\n' '{"schemaVersion":"limitless.omarchy-local-query-input/0.1","objective":"Create a distraction-free reading layout."}' \
             | /tmp/limitless-omarchy-sdist/bin/limitless-omarchy query --catalog catalog > /tmp/limitless-omarchy-sdist-query.json
           /tmp/limitless-omarchy-sdist/bin/python -c "import json; assert json.load(open('/tmp/limitless-omarchy-sdist-query.json'))['disposition'] == 'source-free-method'"

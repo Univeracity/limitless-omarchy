@@ -18,9 +18,11 @@ from .service import (
     query_managed_service,
     stage_managed_artifact,
 )
+from .version import VERSION as __version__
 
 __all__ = [
     "AdapterError",
+    "__version__",
     "agent_connection_status",
     "build_query",
     "build_service_receiver_context",

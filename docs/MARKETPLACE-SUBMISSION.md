@@ -30,12 +30,16 @@ Use this text in the submission's **Maintainer notes** field:
 > validation, review, and enable flow runs no plugin install hook. After the
 > plugin is enabled, the user may click **Install local runtime**. That explicit
 > action creates a virtual environment only under
-> `XDG_DATA_HOME/limitless-omarchy/runtime` and runs Python's package installer
-> there for this reviewed checkout and the public Limitless Library dependency
-> pinned to a full Git commit. It requires no elevated access, does not modify
-> the system Python, and can be skipped; the action is why the marketplace
-> baseline reports the `package-manager` review capability. The current
-> baseline reports no findings and no other review capability. Managed service
+> `XDG_DATA_HOME/limitless-omarchy/runtime`. Before changing it, a
+> standard-library verifier checks the complete dependency lock and both
+> shipped pure-Python wheels against SHA-256 digests in the reviewed release
+> manifest. The installer accepts only hash-approved binary dependencies, then
+> installs the local core and adapter wheels with no index, dependency
+> resolution, Git checkout, or package build. The core wheel is tied to public
+> Limitless Library commit `bbd8d312151e01503c85bce40ebbb3fa22aee66d`.
+> Setup requires no elevated access, does not modify the system Python, and can
+> be skipped; the action is why the marketplace baseline reports the
+> `package-manager` review capability. Managed service
 > access, exact-component installation, and enablement are separate explicit
 > user actions. Method publication is local by default. It becomes automatic
 > only after the user explicitly connects the official service, verifies its
@@ -46,6 +50,9 @@ Use this text in the submission's **Maintainer notes** field:
 > local MCP entry for the agent selected under Omarchy's own Default Agent
 > setting. It uses the current agent client's verified MCP surface, verifies
 > the exact local command/arguments, and keeps a local ownership descriptor.
+> That one connection exposes standard general Limitless query, a concise
+> Omarchy-specific query, and compact method registration; it does not limit the
+> selected agent to Omarchy work.
 > It never overwrites an existing entry of that name; unavailable or unsupported
 > agents are reported locally without blocking the rest of setup.
 
@@ -61,10 +68,14 @@ blocking findings: none
 review capabilities: package-manager
 ```
 
-The evidence consists of the optional CLI installation examples in the root
-README and the two package-installer calls in
+The evidence consists of the development-only installation examples in the
+root README and the two package-installer calls in
 `scripts/limitless-omarchy-runtime`. Both runtime calls target the isolated
-panel-owned virtual environment. The preflight is enforced in CI by
+panel-owned virtual environment. Unlike the rejected 0.1.0 setup shape, this
+release executes no build backend and performs no mutable dependency or Git
+resolution: the full graph is exact and hash-required, source distributions
+are refused, and the shipped wheels are digest-bound and verified before
+installation. The preflight is enforced in CI by
 `scripts/verify-marketplace-baseline.mjs` against the pinned marketplace
 scanner source.
 
@@ -80,8 +91,8 @@ commit as Verified.
 | --- | --- |
 | Omarchy Quattro and its Quickshell modules | Host plugin runtime; native `omarchy plugin validate` is run in CI. |
 | Python 3.11+ with virtual-environment support | Required only after the user selects **Install local runtime** or directly chooses the optional CLI. |
-| Limitless Library | Public Git dependency pinned to a full 40-character commit in `pyproject.toml`. |
-| Initial network use | Omarchy clones this repository; the explicit runtime setup may fetch the pinned dependency and Python dependencies. |
+| Limitless Library | Shipped pure-Python wheel tied to a full public commit and exact digest in `runtime/bundle.json`. |
+| Initial network use | Omarchy clones this repository; explicit runtime setup may fetch only exact hash-approved binary dependencies. Core and adapter wheels are local and install with no index. |
 | Optional managed network use | Begins only after the explicit **Connect to Limitless Library service** action verifies release-pinned trust and the user later chooses a service action. |
 | Local data | Runtime, catalog, immutable method records, sharing projections, and owner-only state live under the configured XDG data/config roots. Local paths never enter source-free public material. |
 | Optional contribution | Compact method registration is a local write. Public transfer occurs only under a saved, digest-bound Public policy; Automatic + Public is an explicit standing authorization and service failure remains retryable. |
@@ -89,19 +100,26 @@ commit as Verified.
 | Privilege | No `sudo`, `pkexec`, system-Python modification, service unit, sudoers policy, or passwordless privilege path. |
 | Desktop mutation | A query never changes the desktop. Reviewed exact-component installation and enablement are separate actions and use Omarchy's native lifecycle. |
 
-## Public cutover checklist
+## Corrective review checklist
 
-1. Freeze a clean release commit after CI, current Omarchy validation, a real
+The repository is public and submission issue
+[`HANCORE-linux/omarchy-plugin-marketplace#2039`](https://github.com/HANCORE-linux/omarchy-plugin-marketplace/issues/2039)
+is the authoritative review thread. The initial 0.1.0 candidate was marked
+`needs-fixes` because future package-index state could execute code during the
+in-panel build. Version 0.1.1 replaces that path with the verified bundle
+described above.
+
+1. Freeze a clean corrective release commit after CI, current Omarchy validation, a real
    Omarchy/Hyprland visual smoke, and a fresh current-marketplace baseline.
 2. Confirm the repository root contains `manifest.json`, `README.md`,
    `LICENSE`, installation and removal directions, and the owned root preview.
-3. Make `Univeracity/limitless-omarchy` public and confirm it is active and
-   unarchived. Marketplace validation refuses private repositories.
-4. Record the full 40-character public `main` SHA. Do not push another commit
+3. Confirm `Univeracity/limitless-omarchy` remains public, active, and
+   unarchived.
+4. Record the full 40-character corrective `main` SHA. Do not push another commit
    while the submission is being reviewed unless the submission is deliberately
    rerun against the new SHA.
-5. Open the marketplace's **Submit a plugin** issue with the repository,
-   category, tags, notes above, and all five owner-confirmed checklist items.
+5. Comment on issue #2039 with the corrective SHA and the supply-chain,
+   combined-MCP, and icon changes. Do not open a duplicate submission.
 6. Review the bot's compatibility and static-baseline reports. The expected
    disposition is `review-required`, with no findings and only
    `package-manager`.

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "limitless.omarchy-runtime-bundle/0.1",
+  "requirements": {
+    "path": "runtime/requirements.lock",
+    "sha256": "61990d3861a2f5474147f2431307da585d9faa540fd9f585d9dcda6a5cae8058"
+  },
+  "packages": [
+    {
+      "name": "limitless-library",
+      "version": "0.1.0a0",
+      "path": "runtime/wheels/limitless_library-0.1.0a0-py3-none-any.whl",
+      "sha256": "6700963050ee6e5397b4e2b6a18c5e0b4ee87d4abef7f7476ace9251c63dd425",
+      "source": {
+        "repository": "https://github.com/Univeracity/limitlesslibrary",
+        "commit": "bbd8d312151e01503c85bce40ebbb3fa22aee66d"
+      }
+    },
+    {
+      "name": "limitless-omarchy",
+      "version": "0.1.1",
+      "path": "runtime/wheels/limitless_omarchy-0.1.1-py3-none-any.whl",
+      "sha256": "d622811e43d6d3375d9dfdc15a46bfc354b7587bdb12c6518fce7bb43f2a72f9",
+      "source": {
+        "repository": "https://github.com/Univeracity/limitless-omarchy",
+        "release": "0.1.1"
+      }
+    }
+  ],
+  "build": {
+    "python": "3.12",
+    "pip": "26.2.1",
+    "pipTools": "7.6.1",
+    "build": "1.5.0",
+    "setuptools": "83.0.0",
+    "wheel": "0.48.0"
+  }
+}

@@ -1,19 +1,17 @@
 [build-system]
-requires = ["setuptools>=77"]
+requires = ["setuptools==83.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "limitless-omarchy"
-version = "0.1.0a0"
+version = "0.1.1"
 description = "Local-first Limitless Library adapter for Omarchy customizations."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 authors = [{name = "Limitless Library"}]
-dependencies = [
-  "limitless-library @ git+https://github.com/univeracity/limitlesslibrary.git@bbd8d312151e01503c85bce40ebbb3fa22aee66d",
-]
+dependencies = []
 keywords = ["agents", "omarchy", "quickshell", "reuse", "verification"]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",

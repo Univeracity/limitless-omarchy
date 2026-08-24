@@ -9,24 +9,42 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
+from limitless_library.catalog import CatalogError, LocalCatalog
 from limitless_library.contracts import strict_json_loads
 from limitless_library.mcp_protocol import McpToolCallError, McpToolDispatcher, McpToolSession, jsonrpc_error
+from limitless_library.mcp_server import TOOL_NAME as GENERAL_TOOL_NAME
+from limitless_library.schemas import load_schema
 
 from .activity import record_lifecycle, record_query
 from .adapter import Runner, _default_runner, query_local_catalog
 from .contributions import ContributionError, schedule_contribution_sync
 from .drafts import DraftError, register_method
 from .settings import SettingsError, load_settings
+from .version import VERSION
 
 SERVER_NAME = "limitless-omarchy"
-SERVER_VERSION = "0.1.0a0"
+SERVER_VERSION = VERSION
 TOOL_NAME = "omarchy_query_before_customization"
 REGISTER_METHOD_TOOL_NAME = "limitless_register_method"
 MAX_REQUEST_BYTES = 1024 * 1024
 TASK_KINDS = frozenset({"omarchy-customization"})
 REQUESTED_USES = frozenset({"adopt", "instantiate"})
 TENANT_SCOPES = frozenset({"private"})
-INSTRUCTIONS = "Before material Omarchy customization, query this local tool with the intended change."
+INSTRUCTIONS = (
+    "Before material work, query Limitless Library. Use limitless_query_before_work for general work and "
+    "omarchy_query_before_customization when the intended change targets Omarchy."
+)
+
+
+def _general_tool() -> dict[str, Any]:
+    return {
+        "name": GENERAL_TOOL_NAME,
+        "title": "Query before work",
+        "description": "Select one permissioned exact component or source-free method for general work, or abstain.",
+        "inputSchema": load_schema("query-0.1.schema.json"),
+        "outputSchema": load_schema("decision-0.1.schema.json"),
+        "annotations": {"readOnlyHint": True, "openWorldHint": False},
+    }
 
 
 def _tool() -> dict[str, Any]:
@@ -157,7 +175,10 @@ def _register_method_tool() -> dict[str, Any]:
 
 
 def _instructions(settings_path: Path | None) -> str:
-    suffix = " It derives a minimal receiver profile and returns one component, method, or abstention."
+    suffix = (
+        " The Omarchy tool derives its minimal receiver profile; the general tool accepts the standard Limitless receiver "
+        "envelope. Each returns one component, method, or abstention."
+    )
     if settings_path is None:
         return INSTRUCTIONS + suffix
     try:
@@ -204,6 +225,18 @@ def _dispatcher(
     drafts_path: Path | None = None,
 ) -> McpToolDispatcher:
     def call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        if name == GENERAL_TOOL_NAME:
+            try:
+                result = LocalCatalog(Path(catalog)).query(arguments)
+                record_query(activity_path, result, channel="general")
+                if drafts_path is not None:
+                    try:
+                        schedule_contribution_sync(drafts_path, activity_path=activity_path)
+                    except ContributionError:
+                        pass
+                return result
+            except (CatalogError, OSError, ValueError) as error:
+                raise McpToolCallError(str(error)) from error
         if name == REGISTER_METHOD_TOOL_NAME:
             if settings_path is None or drafts_path is None:
                 raise McpToolCallError("method registration is not configured")
@@ -246,7 +279,7 @@ def _dispatcher(
         server_name=SERVER_NAME,
         server_version=SERVER_VERSION,
         instructions=_instructions(settings_path),
-        tools=[_tool(), _register_method_tool()],
+        tools=[_general_tool(), _tool(), _register_method_tool()],
         call_tool=call_tool,
         cache_scope="private",
     )

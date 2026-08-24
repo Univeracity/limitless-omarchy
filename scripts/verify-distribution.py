@@ -24,7 +24,14 @@ REQUIRED = {
     "scripts/limitless-omarchy-runtime",
     "scripts/smoke-omarchy-panel",
     "scripts/verify-distribution.py",
+    "scripts/verify-runtime-bundle.py",
     "scripts/verify-marketplace-baseline.mjs",
+    "runtime/README.md",
+    "runtime/bundle.json",
+    "runtime/requirements.in",
+    "runtime/requirements.lock",
+    "runtime/wheels/limitless_library-0.1.0a0-py3-none-any.whl",
+    "runtime/wheels/limitless_omarchy-0.1.1-py3-none-any.whl",
     "docs/ARCHITECTURE.md",
     "docs/COMPATIBILITY.md",
     "docs/RUNTIME-SMOKE.md",
@@ -41,6 +48,7 @@ REQUIRED = {
     "src/limitless_omarchy/provider.py",
     "src/limitless_omarchy/service.py",
     "src/limitless_omarchy/settings.py",
+    "src/limitless_omarchy/version.py",
     "tests/runtime/visual.qml",
 }
 
