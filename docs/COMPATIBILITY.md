@@ -15,7 +15,7 @@ ed7bae4ac5a570e9df307486e0202fdafcc6ee24. Update that pin only after
 checking changes to the plugin manifest, lifecycle, and validator behavior.
 
 The Python package also pins the public Limitless Library core to commit
-f54dcce90b9dcc76a768fa5e907e78fdb2177287. Update it only after running this
+bbd8d312151e01503c85bce40ebbb3fa22aee66d. Update it only after running this
 adapter's full test, package, and distribution checks against the candidate
 core revision.
 
@@ -33,9 +33,9 @@ existing `limitless-omarchy` server, or blocks local use when a selected agent
 is unavailable.
 
 The first setup may use network access to resolve the pinned public core and
-its Python dependencies. Local queries after setup use the owner-selected
+its Python dependencies. Local queries after setup use the runtime-owned
 catalog and require no network or managed service. Managed queries occur only
-after the owner expands that UI section and selects Inspect or Query.
+after the owner explicitly connects from **Library** and submits an objective.
 
 The panel stores its own agent-connection descriptor and report beneath the
 same XDG data root. That state contains only the selected agent IDs and the
@@ -53,6 +53,10 @@ query:
 - omarchy-shell-ipc when an IPC ping succeeds;
 - an explicitly supplied release identifier, if the caller has one; and
 - toolchain values for plugin schema and shell availability.
+
+The caller also supplies one short local-only objective. It is not a receiver
+fact and is not exported during local reuse; it only disambiguates
+otherwise-equal eligible local results.
 
 No local profile is a claim that all arbitrary plugin code is safe. An exact
 component must still be reviewed and deliberately enabled by the owner.

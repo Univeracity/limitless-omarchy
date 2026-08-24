@@ -6,29 +6,33 @@ installing, and explicitly enabling the plugin.
 1. Open the **Limitless Library** bar button.
 2. Select **Install local runtime** and wait for the panel to say "Local
    Library ready." This creates only its XDG-scoped runtime.
-3. Select **Try included example**.
+3. Enter a short customization objective and select **Query local Library**.
 
 Confirm all of the following manually:
 
 1. The panel opens from the bar without a Quickshell error.
 2. Setup does not request elevated access or alter the system Python.
-3. The included example returns a source-free method.
-4. An owner can paste an absolute catalog path and query it from the panel.
+3. The runtime-owned catalog returns an eligible component or source-free method, or a justified abstention.
+4. No catalog path is requested or displayed in the panel.
 5. If Omarchy has a supported default agent, setup reports its local MCP
    connection without replacing unrelated configured servers.
 6. Selecting an unsupported optional agent produces a local connection report
    while leaving the supported default connection usable.
 7. Closing with Escape clears the panel.
-8. No desktop customization was installed, enabled, updated, removed, or
-   shared by the panel.
+8. No desktop customization was installed, enabled, updated, or removed. With
+   the default Local destination, no method was shared.
+9. The **Stats** tab separates Omarchy-specific local/service queries from
+   optional general Limitless queries, and a query increments the expected
+   aggregate result class without exposing its objective or catalog path.
+10. The **?** affordance opens the About surface, its official links require an explicit click, and no link opens merely by viewing the section.
 
 If the installed release includes official service trust material, also confirm:
 
-1. Expanding **Connect to Limitless Library service** makes no request by itself.
-2. Its connection action requires no profile path, account, or API key
+1. Opening the **Service** tab makes no request by itself.
+2. The Library connection action requires no profile path, account, or API key
    and establishes the private installation identity automatically.
-3. **Inspect trust boundary** verifies the activation without sending an
-   objective.
+3. **Connection and trust details** displays the verified activation without
+   sending an objective.
 4. A managed query clears the objective after dispatch.
 5. A signed selection, explicit abstention, or availability fallback is shown
    without changing the local catalog or enabling a plugin.
@@ -39,7 +43,7 @@ If the installed release includes official service trust material, also confirm:
 For lower-level, non-mutating validation of a checked-out repository, the
 optional companion smoke command remains available:
 
-    scripts/smoke-omarchy-panel --catalog ./examples/catalog --summon
+    scripts/smoke-omarchy-panel --catalog ./catalog --summon
 
 It validates the repository with Omarchy's native validator, queries the
 supplied catalog through the CLI, then opens an already-installed panel. It

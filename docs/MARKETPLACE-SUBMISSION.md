@@ -19,7 +19,7 @@ Authoritative process references:
 - Tags: `AI`, `Quickshell`, `Security`
 - License: Apache-2.0
 
-The ID was absent from the marketplace registry when checked on 2026-08-22.
+The ID was absent from the marketplace registry when checked on 2026-08-24.
 It is the permanent marketplace identity and should not change after listing.
 
 ## Maintainer notes
@@ -36,9 +36,11 @@ Use this text in the submission's **Maintainer notes** field:
 > the system Python, and can be skipped; the action is why the marketplace
 > baseline reports the `package-manager` review capability. The current
 > baseline reports no findings and no other review capability. Managed service
-> access, publication, exact-component installation, and enablement are
-> separate explicit user actions. A build with no official service locator
-> remains local-only.
+> access, exact-component installation, and enablement are separate explicit
+> user actions. Method publication is local by default. It becomes automatic
+> only after the user explicitly connects the official service, verifies its
+> publication policy, chooses Public + Automatic, and saves that standing
+> authorization. A build with no official service locator remains local-only.
 >
 > After that same explicit setup action, the panel may configure one named
 > local MCP entry for the agent selected under Omarchy's own Default Agent
@@ -50,7 +52,7 @@ Use this text in the submission's **Maintainer notes** field:
 ## Exact baseline result
 
 Against marketplace commit
-`aa6d4be1b21ccb57cacd5f67d3ffd1f765c97237` on 2026-08-22, the repository's
+`a9a1620b21065040ab4c0aba60289b08ab69cb99` on 2026-08-24, the repository's
 local exact-source preflight produced:
 
 ```text
@@ -81,7 +83,8 @@ commit as Verified.
 | Limitless Library | Public Git dependency pinned to a full 40-character commit in `pyproject.toml`. |
 | Initial network use | Omarchy clones this repository; the explicit runtime setup may fetch the pinned dependency and Python dependencies. |
 | Optional managed network use | Begins only after the explicit **Connect to Limitless Library service** action verifies release-pinned trust and the user later chooses a service action. |
-| Local data | Runtime under the configured XDG data directory; owner-selected catalogs and owner-only state remain local unless separately published. |
+| Local data | Runtime, catalog, immutable method records, sharing projections, and owner-only state live under the configured XDG data/config roots. Local paths never enter source-free public material. |
+| Optional contribution | Compact method registration is a local write. Public transfer occurs only under a saved, digest-bound Public policy; Automatic + Public is an explicit standing authorization and service failure remains retryable. |
 | Agent configuration | The explicit setup or connection action may add one `limitless-omarchy` user-scoped local MCP server for the current Omarchy default and owner-selected additional agents. Only verified agent-client adapters are used; collisions and modified entries are reported and preserved. |
 | Privilege | No `sudo`, `pkexec`, system-Python modification, service unit, sudoers policy, or passwordless privilege path. |
 | Desktop mutation | A query never changes the desktop. Reviewed exact-component installation and enablement are separate actions and use Omarchy's native lifecycle. |

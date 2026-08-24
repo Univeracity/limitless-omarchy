@@ -120,10 +120,29 @@ def _normalize_additional(values: Iterable[str], default_agent: str | None) -> t
     return selected, results
 
 
-def _descriptor(runtime_cli: Path, catalog: Path) -> dict[str, Any]:
+def _descriptor(
+    runtime_cli: Path,
+    catalog: Path,
+    activity_path: Path | None = None,
+    settings_path: Path | None = None,
+    drafts_path: Path | None = None,
+) -> dict[str, Any]:
+    arguments = ["mcp", "--catalog", str(catalog)]
+    if activity_path is not None:
+        activity = Path(activity_path)
+        if not activity.is_absolute() or ".." in activity.parts:
+            raise AgentConnectionError("activity path must be absolute and normalized")
+        arguments.extend(["--activity-path", str(activity)])
+    for flag, configured in (("--settings-path", settings_path), ("--drafts-path", drafts_path)):
+        if configured is None:
+            continue
+        selected = Path(configured)
+        if not selected.is_absolute() or ".." in selected.parts:
+            raise AgentConnectionError(f"{flag[2:].replace('-', ' ')} must be absolute and normalized")
+        arguments.extend([flag, str(selected)])
     return {
         "command": str(runtime_cli),
-        "args": ["mcp", "--catalog", str(catalog)],
+        "args": arguments,
     }
 
 
@@ -566,6 +585,9 @@ def reconcile_agent_connections(
     *,
     runtime_cli: Path,
     catalog: Path,
+    activity_path: Path | None = None,
+    settings_path: Path | None = None,
+    drafts_path: Path | None = None,
     additional_agents: Iterable[str] = (),
     config_home: Path | None = None,
     home: Path | None = None,
@@ -587,7 +609,7 @@ def reconcile_agent_connections(
     if default_agent is None:
         results.append({"agent": "default", "status": "skipped", "reason": default_reason or "default-agent-not-set"})
     targets = [agent for agent in [default_agent, *additional] if agent is not None]
-    descriptor = _descriptor(executable, source_catalog)
+    descriptor = _descriptor(executable, source_catalog, activity_path, settings_path, drafts_path)
     managed: dict[str, Any] = dict(state["managed"])
     for agent in targets:
         record, result = _connect_one(

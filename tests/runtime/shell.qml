@@ -51,12 +51,13 @@ ShellRoot {
     interval: 1500
     repeat: false
     onTriggered: {
-      if (root.visualAction === "example" && panel.item) panel.item.queryExample()
       if (root.visualAction === "service" && panel.item) {
         panel.item.runtimeReady = true
+        panel.item.serviceReady = true
+        panel.item.serviceStatusKnown = true
         panel.item.serviceExpanded = true
         panel.item.headline = "Local Library ready"
-        panel.item.detail = "Local reuse remains available. Managed discovery is an explicit opt-in."
+        panel.item.detail = "Local reuse and service discovery are available."
       }
     }
   }

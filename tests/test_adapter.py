@@ -35,6 +35,7 @@ from limitless_omarchy.adapter import (
     validate_plugin,
 )
 from limitless_omarchy.cli import (
+    _local_query_input,
     _service_artifact_enable_input,
     _service_artifact_install_input,
     _service_artifact_review_input,
@@ -75,7 +76,7 @@ def shell_unavailable(_argv: object) -> subprocess.CompletedProcess[str]:
 
 
 def sealed_catalog(tmp_path: Path) -> Path:
-    source = Path(__file__).parents[1] / "examples" / "catalog" / "reading-focus-method" / "capsule.draft.json"
+    source = Path(__file__).parents[1] / "catalog" / "reading-focus-method" / "capsule.draft.json"
     draft = json.loads(source.read_text(encoding="utf-8"))
     capsule = seal_capsule(draft, source.parent)
     target = tmp_path / "catalog" / "reading-focus-method"
@@ -155,6 +156,19 @@ class UnavailableServiceConnector(FakeServiceConnector):
         raise ServiceUnavailableError("unavailable")
 
 
+class UsageExceededError(ServiceUnavailableError):
+    def __init__(self) -> None:
+        super().__init__("free usage exceeded")
+        self.reset_at = "2026-08-24T00:00:00Z"
+        self.upgrade_url = "https://limitlesslibrary.com/#contact"
+
+
+class UsageExceededServiceConnector(FakeServiceConnector):
+    def query(self, query: dict[str, object]) -> dict[str, object]:
+        self.last_query = query
+        raise UsageExceededError
+
+
 class InvalidAuthorityConnector(FakeServiceConnector):
     def inspect(self) -> object:
         raise ServiceConnectorError("invalid authority")
@@ -217,7 +231,7 @@ def test_profile_abstains_from_claiming_available_shell() -> None:
     assert profile["toolchain"]["omarchyShell"] == "unavailable"
 
 
-def test_build_query_is_generic_and_contains_no_task_text() -> None:
+def test_build_query_can_remain_generic_when_no_local_objective_is_supplied() -> None:
     request = build_query(
         discover_profile(runner=shell_available),
         evaluated_at=datetime(2026, 8, 16, tzinfo=UTC),
@@ -227,6 +241,17 @@ def test_build_query_is_generic_and_contains_no_task_text() -> None:
     assert request["taskKind"] == "omarchy-customization"
     assert request["tenantScope"] == "private"
     assert request["evaluatedAt"] == "2026-08-16T00:00:00Z"
+    assert "objective" not in request
+
+
+def test_build_query_binds_one_short_local_objective() -> None:
+    request = build_query(
+        discover_profile(runner=shell_available),
+        objective="  Keep Wi-Fi rows still during password entry.  ",
+        evaluated_at=datetime(2026, 8, 16, tzinfo=UTC),
+    )
+
+    assert request["objective"] == "Keep Wi-Fi rows still during password entry."
 
 
 def test_invalid_release_is_rejected() -> None:
@@ -276,12 +301,15 @@ def test_service_activation_is_one_action_and_persists_no_credential(
             "activatedAt": "2026-08-20T22:00:00Z",
         },
     )
+    connector = FakeServiceConnector(ServiceProfile.from_json(profile))
+    monkeypatch.setattr(service_module, "activated_service_connector", lambda: connector)
 
     result = activate_managed_service()
 
     assert result["mode"] == "managed-service-ready"
     assert result["service"]["defaultAudience"] == "private"
     assert result["service"]["authenticated"] is False
+    assert result["publicationPolicy"]["digest"] == "sha256:" + "3" * 64
 
 
 def test_ordinary_service_path_uses_automatic_anonymous_authority(
@@ -319,6 +347,23 @@ def test_ordinary_service_path_uses_automatic_anonymous_authority(
     assert result["mode"] == "managed-service-ready"
 
 
+def test_service_inspection_distinguishes_not_enabled_from_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def not_enabled() -> object:
+        raise service_module.OfficialServiceNotConfiguredError("not enabled")
+
+    monkeypatch.setattr(service_module, "activated_service_connector", not_enabled)
+
+    result = inspect_managed_service()
+
+    assert result == {
+        "schemaVersion": "limitless.omarchy-service-status/0.1",
+        "mode": "service-not-enabled",
+        "reason": "service-not-enabled",
+    }
+
+
 def test_managed_query_returns_verified_shape_without_echoing_sensitive_input(tmp_path: Path) -> None:
     result = query_managed_service(
         service_profile(tmp_path),
@@ -351,6 +396,28 @@ def test_managed_unavailability_abstains_without_disabling_local_reuse(tmp_path:
     assert result["disposition"] == "abstain"
     assert result["reason"] == "service-unavailable-local-still-available"
     assert result["selection"] is None
+
+
+def test_managed_usage_limit_preserves_local_reuse_and_exposes_only_safe_upgrade_details(
+    tmp_path: Path,
+) -> None:
+    result = query_managed_service(
+        service_profile(tmp_path),
+        objective="Find a reviewed focus customization.",
+        request_id="request:omarchy-test",
+        runner=shell_available,
+        connector_factory=UsageExceededServiceConnector,
+    )
+
+    encoded = json.dumps(result)
+    assert result["disposition"] == "abstain"
+    assert result["reason"] == "free-usage-exceeded"
+    assert result["selection"] is None
+    assert result["usage"] == {
+        "resetAt": "2026-08-24T00:00:00Z",
+        "upgradeUrl": "https://limitlesslibrary.com/#contact",
+    }
+    assert "Find a reviewed" not in encoded
 
 
 def test_exact_result_projects_no_delivery_secret_and_stages_from_signed_local_state(
@@ -630,6 +697,22 @@ def test_service_cli_reads_objective_and_token_only_from_bounded_stdin(
     )
 
 
+def test_local_cli_reads_only_one_short_objective_from_bounded_stdin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "schemaVersion": "limitless.omarchy-local-query-input/0.1",
+        "objective": "Keep Wi-Fi rows still during password entry.",
+    }
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        SimpleNamespace(buffer=BytesIO((json.dumps(payload) + "\n").encode("utf-8"))),
+    )
+
+    assert _local_query_input() == "Keep Wi-Fi rows still during password entry."
+
+
 @pytest.mark.parametrize(
     ("operation", "draft", "state", "accepted_digest", "reason"),
     [
@@ -829,7 +912,7 @@ def test_query_returns_source_free_method_for_eligible_catalog(tmp_path: Path) -
 
 
 def test_bundled_catalog_is_sealed_and_queryable() -> None:
-    catalog = Path(__file__).parents[1] / "examples" / "catalog"
+    catalog = Path(__file__).parents[1] / "catalog"
 
     result = query_local_catalog(catalog, runner=shell_available, evaluated_at=datetime(2026, 8, 16, tzinfo=UTC))
 
@@ -870,7 +953,7 @@ def test_local_query_rejects_broader_task_or_scope(
 
 
 def test_owner_can_seal_a_local_capsule_without_overwriting(tmp_path: Path) -> None:
-    draft = Path(__file__).parents[1] / "examples" / "catalog" / "reading-focus-method" / "capsule.draft.json"
+    draft = Path(__file__).parents[1] / "catalog" / "reading-focus-method" / "capsule.draft.json"
     output = tmp_path / "private-capsule.json"
 
     sealed = seal_local_capsule(draft, output)
@@ -900,7 +983,7 @@ def test_mcp_derives_the_profile_and_returns_a_structured_method(tmp_path: Path)
             "jsonrpc": "2.0",
             "id": "query-1",
             "method": "tools/call",
-            "params": {"name": TOOL_NAME, "arguments": {}},
+            "params": {"name": TOOL_NAME, "arguments": {"objective": "Create a portable greeting."}},
         },
         runner=shell_available,
     )
@@ -918,7 +1001,10 @@ def test_mcp_rejects_arbitrary_extra_task_data(tmp_path: Path) -> None:
             "jsonrpc": "2.0",
             "id": "query-2",
             "method": "tools/call",
-            "params": {"name": TOOL_NAME, "arguments": {"prompt": "private request"}},
+            "params": {
+                "name": TOOL_NAME,
+                "arguments": {"objective": "Create a portable greeting.", "prompt": "private request"},
+            },
         },
         runner=shell_available,
     )
@@ -936,7 +1022,10 @@ def test_mcp_rejects_free_text_in_a_bounded_field(tmp_path: Path) -> None:
             "method": "tools/call",
             "params": {
                 "name": TOOL_NAME,
-                "arguments": {"tenantScope": "private work on a sensitive layout"},
+                "arguments": {
+                    "objective": "Create a portable greeting.",
+                    "tenantScope": "private work on a sensitive layout",
+                },
             },
         },
         runner=shell_available,
@@ -955,7 +1044,7 @@ def test_mcp_supports_modern_stateless_tool_calls(tmp_path: Path) -> None:
             "method": "tools/call",
             "params": {
                 "name": TOOL_NAME,
-                "arguments": {},
+                "arguments": {"objective": "Create a portable greeting."},
                 "_meta": modern_metadata(client_name="test", client_version="1"),
             },
         },
@@ -967,15 +1056,18 @@ def test_mcp_supports_modern_stateless_tool_calls(tmp_path: Path) -> None:
     assert response["result"]["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "limitless-omarchy"
 
 
-def test_general_provider_reuses_the_core_server_with_the_current_interpreter(tmp_path: Path) -> None:
+def test_general_provider_wraps_the_core_server_with_the_current_interpreter(tmp_path: Path) -> None:
     catalog = tmp_path / "general-catalog"
+    activity = tmp_path / "activity.json"
 
-    assert general_provider_command(catalog) == [
+    assert general_provider_command(catalog, activity) == [
         sys.executable,
         "-m",
-        "limitless_library.mcp_server",
+        "limitless_omarchy.provider",
         "--catalog",
         str(catalog),
+        "--activity-path",
+        str(activity),
     ]
 
 
@@ -1020,3 +1112,48 @@ def test_general_provider_is_explicit_and_exposes_only_the_generic_tool() -> Non
 
     assert [tool["name"] for tool in responses[0]["result"]["tools"]] == [GENERAL_TOOL_NAME]
     assert responses[1]["result"]["structuredContent"]["decision"] == "reuse"
+
+
+def test_general_provider_counts_only_the_aggregate_outcome(tmp_path: Path) -> None:
+    request = load_json(GENERAL_REQUEST)
+    activity = tmp_path / "activity.json"
+    message = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+            "name": GENERAL_TOOL_NAME,
+            "arguments": request,
+            "_meta": modern_metadata(client_name="test", client_version="1"),
+        },
+    }
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = os.pathsep.join([str(ROOT / "src"), str(Path(limitless_library.__file__).parents[1])])
+
+    completed_process = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "limitless_omarchy.cli",
+            "provider",
+            "--catalog",
+            str(GENERAL_CATALOG),
+            "--activity-path",
+            str(activity),
+        ],
+        input=json.dumps(message) + "\n",
+        capture_output=True,
+        check=True,
+        encoding="utf-8",
+        env=environment,
+    )
+
+    assert json.loads(completed_process.stdout)["result"]["structuredContent"]["decision"] == "reuse"
+    stored = json.loads(activity.read_text(encoding="utf-8"))
+    assert stored["queries"]["total"] == 1
+    assert stored["queries"]["general"] == 1
+    assert stored["queries"]["local"] == 0
+    assert stored["queries"]["service"] == 0
+    serialized = activity.read_text(encoding="utf-8")
+    assert request["taskKind"] not in serialized
+    assert request["evaluatedAt"] not in serialized

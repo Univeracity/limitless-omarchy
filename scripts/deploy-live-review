@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# Stage, validate, and atomically swap a development copy on an Omarchy host.
+# The script refuses to touch a live plugin while any lock state is active.
+
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: scripts/deploy-live-review --host USER@HOST --destination ABSOLUTE_PATH [--port PORT] [--identity PATH]
+
+This is a maintainer review tool, not an installer. It:
+  1. refuses active, requested, pending, session, or stale-secure lock state;
+  2. copies the repository into a sibling staging directory;
+  3. validates the staged plugin with Omarchy's native validator;
+  4. rechecks the lock and swaps the directory once; and
+  5. keeps the previous directory in a hidden rollback area that Omarchy does
+     not scan as a second plugin with the same id; and
+  6. restarts the unlocked shell once so its QML instance uses the new tree.
+USAGE
+}
+
+host=""
+destination=""
+port="22"
+identity=""
+while (($#)); do
+  case "$1" in
+    --host)
+      (($# >= 2)) || { usage >&2; exit 2; }
+      host=$2
+      shift 2
+      ;;
+    --destination)
+      (($# >= 2)) || { usage >&2; exit 2; }
+      destination=$2
+      shift 2
+      ;;
+    --port)
+      (($# >= 2)) || { usage >&2; exit 2; }
+      port=$2
+      shift 2
+      ;;
+    --identity)
+      (($# >= 2)) || { usage >&2; exit 2; }
+      identity=$2
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+[[ $host =~ ^[A-Za-z0-9._-]+@[A-Za-z0-9._:-]+$ ]] || { usage >&2; exit 2; }
+[[ $destination == /* && $destination != / && $destination != */../* && $destination != *$'\n'* ]] \
+  || { usage >&2; exit 2; }
+[[ $port =~ ^[0-9]{1,5}$ && $port -ge 1 && $port -le 65535 ]] || { usage >&2; exit 2; }
+[[ -z $identity || $identity == /* && -f $identity && $identity != *[[:space:]]* ]] || { usage >&2; exit 2; }
+
+for command in ssh rsync; do
+  command -v "$command" >/dev/null || { printf 'Required command is unavailable: %s\n' "$command" >&2; exit 2; }
+done
+
+repo_root=$(cd -- "$(dirname -- "$0")/.." && pwd -P)
+ssh_arguments=(-o BatchMode=yes -o ConnectTimeout=10 -p "$port")
+[[ -z $identity ]] || ssh_arguments+=(-i "$identity")
+remote_shell=(ssh "${ssh_arguments[@]}" "$host")
+rsync_shell="ssh -o BatchMode=yes -o ConnectTimeout=10 -p $port"
+[[ -z $identity ]] || rsync_shell+=" -i $identity"
+
+lock_status() {
+  "${remote_shell[@]}" \
+    'export OMARCHY_PATH=/usr/share/omarchy; omarchy-shell lock status' \
+    | python3 -c 'import json,sys; value=json.load(sys.stdin); raise SystemExit(1 if any(value.get(k) is True for k in ("locked","requested","pending","sessionLocked","secure")) else 0)'
+}
+
+if ! lock_status; then
+  printf '%s\n' 'Refusing live review deployment while the Omarchy lock is active or unresolved.' >&2
+  exit 3
+fi
+
+stage=$("${remote_shell[@]}" "destination=$(printf '%q' "$destination"); parent=\${destination%/*}; mkdir -p -- \"\$parent\"; mktemp -d \"\$parent/.limitless-review.XXXXXX\"")
+[[ $stage == /*/.limitless-review.* ]] || { printf '%s\n' 'Remote staging path is invalid.' >&2; exit 2; }
+
+rsync -a --delete \
+  --exclude=.git/ \
+  --exclude=.agent-state/ \
+  --exclude=.pytest_cache/ \
+  --exclude=.ruff_cache/ \
+  --exclude=build/ \
+  --exclude=dist/ \
+  --exclude='__pycache__/' \
+  -e "$rsync_shell" \
+  "$repo_root/" "$host:$stage/"
+
+"${remote_shell[@]}" "stage=$(printf '%q' "$stage"); destination=$(printf '%q' "$destination"); if [[ -d \"\$destination/.git\" ]]; then cp -a -- \"\$destination/.git\" \"\$stage/.git\"; fi; omarchy plugin validate \"\$stage\""
+
+if ! lock_status; then
+  printf 'Lock state changed during staging; validated files remain at %s\n' "$stage" >&2
+  exit 3
+fi
+
+timestamp=$(date -u +%Y%m%dT%H%M%SZ)
+destination_parent=${destination%/*}
+destination_name=${destination##*/}
+rollback_root=$destination_parent/.limitless-rollbacks
+failed_root=$destination_parent/.limitless-failed
+rollback=$rollback_root/$destination_name-$timestamp
+"${remote_shell[@]}" 'export OMARCHY_PATH=/usr/share/omarchy; omarchy-shell -q shell hide univeracity.limitless-library' || true
+"${remote_shell[@]}" "destination=$(printf '%q' "$destination"); stage=$(printf '%q' "$stage"); rollback_root=$(printf '%q' "$rollback_root"); rollback=$(printf '%q' "$rollback"); mkdir -p -- \"\$rollback_root\"; [[ -d \"\$destination\" && ! -e \"\$rollback\" ]]; mv -- \"\$destination\" \"\$rollback\"; mv -- \"\$stage\" \"\$destination\""
+
+if ! lock_status || ! "${remote_shell[@]}" "export OMARCHY_PATH=/usr/share/omarchy; destination=$(printf '%q' "$destination"); omarchy plugin validate \"\$destination\" >/dev/null; omarchy-restart-shell; for attempt in {1..20}; do omarchy-shell shell ping >/dev/null && exit 0; sleep 0.3; done; exit 1"; then
+  failed=$failed_root/$destination_name-$timestamp
+  "${remote_shell[@]}" "destination=$(printf '%q' "$destination"); failed_root=$(printf '%q' "$failed_root"); failed=$(printf '%q' "$failed"); rollback=$(printf '%q' "$rollback"); mkdir -p -- \"\$failed_root\"; mv -- \"\$destination\" \"\$failed\"; mv -- \"\$rollback\" \"\$destination\"; omarchy-restart-shell"
+  printf 'Live validation failed; previous plugin restored. Failed tree: %s\n' "$failed" >&2
+  exit 4
+fi
+
+printf 'Live review deployed. Rollback retained at %s\n' "$rollback"

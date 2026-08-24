@@ -42,6 +42,7 @@ from limitless_library.exact_file_bundle import (
 )
 from limitless_library.official_service import (
     OfficialServiceActivationError,
+    OfficialServiceNotConfiguredError,
     OfficialServiceUnavailableError,
     activate_official_service,
     activated_service_connector,
@@ -74,6 +75,8 @@ _NUMERIC_RELEASE = re.compile(r"^[0-9]+(?:\.[0-9]+){0,3}$")
 _DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 _REASON_CODE = re.compile(r"^[a-z][a-z0-9-]{0,79}$")
 _SIGNATURE = re.compile(r"^[A-Za-z0-9_-]{86}$")
+_WHOLE_SECOND = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+_USAGE_UPGRADE_URL = "https://limitlesslibrary.com/#contact"
 _HANDOFF_STATE_SCHEMA_VERSION = "limitless.omarchy-artifact-handoff-state/0.1"
 _RECEIVER_INSTALLATION_SCHEMA_VERSION = "limitless.omarchy-receiver-installation/0.1"
 _RECEIVER_ADOPTION_SCHEMA_VERSION = "limitless.omarchy-receiver-adoption/0.1"
@@ -116,26 +119,28 @@ def _service_connector(
 
 
 def activate_managed_service() -> dict[str, Any]:
-    """Enable the release-pinned official service from one explicit UI action."""
+    """Enable and verify the release-pinned service from one explicit UI action."""
 
     try:
         state = activate_official_service()
-        profile = ServiceProfile.from_json(state["profile"])
+        ServiceProfile.from_json(state["profile"])
+        connector = activated_service_connector()
+        result = _service_status(connector, connector.inspect())
     except OfficialServiceUnavailableError:
         return {
             "schemaVersion": "limitless.omarchy-service-status/0.1",
             "mode": "service-unavailable",
             "reason": "service-unavailable-local-still-available",
         }
-    except (OfficialServiceActivationError, OSError, ValueError) as error:
+    except ServiceUnavailableError:
+        return {
+            "schemaVersion": "limitless.omarchy-service-status/0.1",
+            "mode": "service-unavailable",
+            "reason": "service-unavailable-local-still-available",
+        }
+    except (OfficialServiceActivationError, ServiceConnectorError, OSError, ValueError) as error:
         raise AdapterError("official service activation failed") from error
-    return {
-        "schemaVersion": "limitless.omarchy-service-status/0.1",
-        "mode": "managed-service-ready",
-        "service": profile.public_summary(),
-        "policy": {"digest": profile.accepted_policy_digest},
-        "activatedAt": state["activatedAt"],
-    }
+    return {**result, "activatedAt": state["activatedAt"]}
 
 
 def _service_status(
@@ -161,11 +166,28 @@ def inspect_managed_service(
 ) -> dict[str, Any]:
     """Verify one explicitly supplied profile without sending a task query."""
 
-    connector = _service_connector(
-        profile_path,
-        access_token=None,
-        connector_factory=connector_factory,
-    )
+    if profile_path is None and connector_factory is ServiceConnector:
+        try:
+            connector = activated_service_connector()
+        except OfficialServiceNotConfiguredError:
+            return {
+                "schemaVersion": "limitless.omarchy-service-status/0.1",
+                "mode": "service-not-enabled",
+                "reason": "service-not-enabled",
+            }
+        except (
+            OfficialServiceActivationError,
+            ServiceIdentityError,
+            OSError,
+            ValueError,
+        ) as error:
+            raise AdapterError("service profile or credential is invalid") from error
+    else:
+        connector = _service_connector(
+            profile_path,
+            access_token=None,
+            connector_factory=connector_factory,
+        )
     try:
         return _service_status(connector, connector.inspect())
     except ServiceUnavailableError:
@@ -443,8 +465,12 @@ def _managed_result(
     decision: dict[str, Any] | None,
     handoff_state_path: Path | None = None,
     unavailable: bool = False,
+    usage: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    if unavailable:
+    if usage is not None:
+        disposition = "abstain"
+        reason = "free-usage-exceeded"
+    elif unavailable:
         disposition = "abstain"
         reason = "service-unavailable-local-still-available"
     elif decision is None:
@@ -455,7 +481,7 @@ def _managed_result(
     else:
         disposition = decision["treatment"]
         reason = "verified-service-selection"
-    return {
+    result = {
         "schemaVersion": "limitless.omarchy-service-result/0.1",
         "mode": "managed-service",
         "disposition": disposition,
@@ -466,6 +492,9 @@ def _managed_result(
         "selection": _project_service_selection(decision),
         "handoffStatePath": None if handoff_state_path is None else str(handoff_state_path),
     }
+    if usage is not None:
+        result["usage"] = usage
+    return result
 
 
 def query_managed_service(
@@ -496,13 +525,23 @@ def query_managed_service(
             receiver_context=build_service_receiver_context(local_profile),
         )
         decision = connector.query(query)
-    except ServiceUnavailableError:
+    except ServiceUnavailableError as error:
+        reset_at = getattr(error, "reset_at", None)
+        upgrade_url = getattr(error, "upgrade_url", None)
+        usage = None
+        if (
+            isinstance(reset_at, str)
+            and _WHOLE_SECOND.fullmatch(reset_at) is not None
+            and upgrade_url == _USAGE_UPGRADE_URL
+        ):
+            usage = {"resetAt": reset_at, "upgradeUrl": upgrade_url}
         return _managed_result(
             connector=connector,
             local_profile=local_profile,
             query=query,
             decision=None,
-            unavailable=True,
+            unavailable=usage is None,
+            usage=usage,
         )
     except (ServiceConnectorError, ValueError) as error:
         raise AdapterError("managed service query verification failed") from error

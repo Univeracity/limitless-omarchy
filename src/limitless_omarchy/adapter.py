@@ -90,6 +90,7 @@ def discover_profile(*, omarchy_release: str | None = None, runner: Runner = _de
 def build_query(
     profile: dict[str, Any],
     *,
+    objective: str | None = None,
     task_kind: str = "omarchy-customization",
     requested_use: str = "adopt",
     tenant_scope: str = "private",
@@ -108,8 +109,13 @@ def build_query(
         isinstance(key, str) and isinstance(value, str) for key, value in toolchain.items()
     ):
         raise AdapterError("profile toolchain is invalid")
+    if objective is not None and (
+        not isinstance(objective, str) or not objective.strip() or len(objective.strip()) > 480 or "\x00" in objective
+    ):
+        raise AdapterError("objective must be non-empty text no longer than 480 characters")
     return {
         "schemaVersion": "limitless.query/0.1",
+        **({"objective": objective.strip()} if objective is not None else {}),
         "taskKind": task_kind,
         "receiver": {"constraints": constraints, "toolchain": toolchain},
         "requestedUse": requested_use,
@@ -144,6 +150,7 @@ def _abstention(profile: dict[str, Any], request: dict[str, Any] | None, reason:
 def query_local_catalog(
     catalog: Path,
     *,
+    objective: str | None = None,
     omarchy_release: str | None = None,
     task_kind: str = "omarchy-customization",
     requested_use: str = "adopt",
@@ -157,6 +164,7 @@ def query_local_catalog(
     profile = discover_profile(omarchy_release=omarchy_release, runner=runner)
     request = build_query(
         profile,
+        objective=objective,
         task_kind=task_kind,
         requested_use=requested_use,
         tenant_scope=tenant_scope,

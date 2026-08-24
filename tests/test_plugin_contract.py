@@ -35,6 +35,8 @@ def test_marketplace_submission_materials_are_complete() -> None:
     submission = (ROOT / "docs" / "MARKETPLACE-SUBMISSION.md").read_text(encoding="utf-8")
     baseline = ROOT / "scripts" / "verify-marketplace-baseline.mjs"
     preview = (ROOT / "preview.png").read_bytes()
+    limitless_logo = (ROOT / "assets" / "limitless-library-logo.png").read_bytes()
+    univeracity_logo = (ROOT / "assets" / "univeracity-logo.png").read_bytes()
 
     assert "omarchy plugin remove univeracity.limitless-library" in readme
     assert "Marketplace verification" in readme
@@ -43,13 +45,15 @@ def test_marketplace_submission_materials_are_complete() -> None:
     assert "approved-and-verified" in submission
     assert baseline.is_file()
     assert preview.startswith(b"\x89PNG\r\n\x1a\n")
+    assert limitless_logo.startswith(b"\x89PNG\r\n\x1a\n")
+    assert univeracity_logo.startswith(b"\x89PNG\r\n\x1a\n")
 
 
 def test_package_pins_a_public_limitless_library_revision() -> None:
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
     assert "limitless-library @ git+https://github.com/univeracity/limitlesslibrary.git@" in project
-    assert "f54dcce90b9dcc76a768fa5e907e78fdb2177287" in project
+    assert "bbd8d312151e01503c85bce40ebbb3fa22aee66d" in project
 
 
 def test_cli_keeps_local_queries_bounded_to_omarchy_private_reuse() -> None:
@@ -65,6 +69,8 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     contents = (ROOT / "plugin" / "PanelContents.qml").read_text(encoding="utf-8")
 
     assert "function open(payloadJson)" in panel
+    assert 'payload.section || "library"' in panel
+    assert '"library", "agents", "service", "stats", "about"' in panel
     assert "function close()" in panel
     assert '"/scripts/limitless-omarchy-runtime"' in panel
     assert "function installRuntime()" in panel
@@ -72,7 +78,9 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "function reconcileAgents()" in panel
     assert "function disconnectAgents()" in panel
     assert "function queryCatalog()" in panel
-    assert "function queryExample()" in panel
+    assert "limitless.omarchy-local-query-input/0.1" in panel
+    assert "function queryExample()" not in panel
+    assert "function refreshStats()" in panel
     assert "function activateService()" in panel
     assert "function inspectService()" in panel
     assert "function queryService()" in panel
@@ -80,39 +88,95 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "function prepareServiceArtifactReview()" in panel
     assert "function installServiceArtifactDisabled()" in panel
     assert "function enableServiceArtifact()" in panel
-    assert "function publishContribution()" in panel
-    assert "function inspectPublication()" in panel
-    assert "function withdrawPublication()" in panel
-    assert "function runPublication(" in panel
     assert "function openPublicationPolicy()" in panel
+    assert "function transitionDraft(" in panel
+    assert "function saveSettings()" in panel
     assert "stdinEnabled: true" in panel
     assert "command.write(root.pendingInput" in panel
+    assert "command.running = false" in panel
     assert 'root.serviceObjective = ""' in panel
     assert "PanelContents" in panel
     assert "Flickable" in contents
-    assert "Math.min(content.implicitHeight + 40, 680)" in contents
+    assert "implicitHeight: 680" in contents
     assert "TextInput" in contents
-    assert "Try included example" in contents
+    assert 'text: "Library"' in contents
+    assert 'text: "Agents"' in contents
+    assert 'text: "Service"' in contents
+    assert 'text: "Stats"' in contents
+    assert 'text: "?"' in contents
+    assert 'tooltipText: "About Limitless Library"' in contents
+    assert 'root.panel.selectSection("about")' in contents
+    assert "WELCOME TO THE LIMITLESS LIBRARY" in contents
+    assert "WHY LIMITLESS" not in contents
+    assert "WHY IT EXISTS" not in contents
+    assert "WHERE IT CAME FROM" not in contents
+    assert "THE LONG VIEW" in contents
+    assert "As the Limitless Library grows, valuable work compounds across" in contents
+    assert "Why reuse needs more than just search." in contents
+    assert "Omarchy: the revolution will be customized." in contents
+    assert "a Univeracity project" in contents
+    assert 'source: Qt.resolvedUrl("../assets/limitless-library-logo.png")' in contents
+    assert 'source: Qt.resolvedUrl("../assets/univeracity-logo.png")' in contents
+    assert "© 2026 Limitless Library · Apache-2.0" in contents
+    assert "function openOfficialUrl(url)" in panel
+    assert "Qt.openUrlExternally(target)" in panel
+    assert "https://limitlesslibrary.com" in panel + contents
+    assert "property bool serviceUsageExceeded: false" in panel
+    assert 'value.reason === "free-usage-exceeded"' in panel
+    assert '"Free usage exceeded. Resets: "' in panel
+    assert '"https://limitlesslibrary.com/#contact"' in panel
+    assert 'text: "Upgrade or request more usage ↗"' in contents
+    assert "root.panel.openUsageUpgrade()" in contents
+    assert "https://univeracity.com" in panel + contents
+    assert "https://github.com/Univeracity/limitless-omarchy" in panel + contents
+    assert "Omarchy-specific queries" in contents
+    assert "General queries" in contents
+    assert "Only aggregate counters are stored locally" in contents
+    assert "A wheel was left peacefully un-reinvented." in contents
+    assert "activeSection" in panel + contents
+    assert "PanelHero" in contents
+    assert "PanelSectionHeader" in contents
+    assert "ScrollBar.vertical" in contents
+    assert "included example" not in (panel + contents).lower()
+    assert "See what Limitless has been doing in the background." in contents
+    assert "Looks like reuse showed up to work. Nice." in contents
+    assert 'text: statTile.loading ? "◒" : statTile.value' in contents
+    assert "running: statTile.loading" in contents
+    assert "onRunningChanged: if (!running) statValue.rotation = 0" in contents
+    assert "function heroMeta(fallback)" in contents
+    assert 'root.panel.operation === "stats"' in contents
+    assert "Checking for reusable work" not in contents
+    assert "Component.onCompleted: Qt.callLater(function() { root.refresh() })" in panel
+    assert 'completedOperation === "panel-state" && root.runtimeReady' in panel
+    assert 'root.operation === "status") root.applyResult(root.commandOutput)' in panel
     assert "Agent connection" in contents
     assert "Optional additional agents" in contents
     assert "Apply selected agent connections" in contents
+    assert "agentReportNeeded" in panel + contents
     assert "Disconnect plugin-owned agent connections" in contents
     assert "Connect to Limitless Library service" in contents
+    assert "Local reuse is available. Opt in for service discovery." in contents
+    assert "Local reuse is available. Checking service discovery." in contents
+    assert "Local reuse and service discovery are available." in contents
     assert "Inspect trust boundary" in contents
-    assert "Query managed service" in contents
+    assert "Query Limitless Library service" in contents
     assert "Prepare verified plugin review" in contents
     assert "Install reviewed plugin disabled" in contents
     assert "Enable reviewed plugin" in contents
-    assert "Share a reviewed contribution (optional)" in contents
-    assert "Limitless does not scan the workspace" in contents
-    assert "Open verified public publication policy" in contents
-    assert "Publish explicitly selected draft" in contents
-    assert "Check contribution status" in contents
-    assert "Confirm withdrawal" in contents
+    assert "Library settings" in contents
+    assert "DEFAULT SHARING" in contents
+    assert "CONTRIBUTION MODE" in contents
+    assert "Methods + exact sources" in contents
+    assert "What are you about to make or change?" in contents
+    assert "PUBLIC AND SHARED REUSE" in contents
+    assert "View verified publication policy" in contents
+    assert "MOVE AVAILABILITY" in contents
+    assert "/absolute/path" not in contents
+    assert "LOCAL CATALOG FOLDER" not in contents
     assert "profile file, or API key" in contents
     assert "serviceProfilePath" not in panel + contents
     assert "serviceAccessToken" not in panel + contents
-    assert "authorization" not in panel + contents
+    assert "standing authorization" in contents
     assert "WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive" in panel
     assert "selectionReference" in panel
     assert "method.summary" in panel
@@ -139,6 +203,9 @@ def test_panel_runtime_is_syntax_valid_and_never_targets_system_python() -> None
     assert "sudo" not in text
     assert '"$python_command" -m venv "$runtime"' in text
     assert 'mv -- "$stage/venv" "$runtime"' not in text
+    assert "stage_runtime_source" in text
+    assert 'pip install \\\n      --disable-pip-version-check --no-input --upgrade "$plugin_root"' not in text
+    assert 'pip install \\\n    --disable-pip-version-check --no-input "$plugin_root"' not in text
     assert "service-inspect" in text
     assert "service-query" in text
     assert "service-activate" in text
@@ -152,6 +219,56 @@ def test_panel_runtime_is_syntax_valid_and_never_targets_system_python() -> None
     assert "agent-disconnect" in text
     assert "--objective" not in text
     assert "LIMITLESS_SERVICE_TOKEN" not in text
+
+
+def test_panel_runtime_builds_from_an_xdg_snapshot_without_mutating_the_watched_plugin_tree(tmp_path: Path) -> None:
+    runtime = ROOT / "scripts" / "limitless-omarchy-runtime"
+    data_home = tmp_path / "xdg-data"
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    pip_source_log = tmp_path / "pip-source.txt"
+    fake_python = fake_bin / "python3"
+    fake_python.write_text(
+        """#!/bin/bash
+set -euo pipefail
+if [[ ${1:-} == "-m" && ${2:-} == "venv" ]]; then
+  runtime=$3
+  mkdir -p "$runtime/bin"
+  cp "$0" "$runtime/bin/python"
+  cat >"$runtime/bin/limitless-omarchy" <<'CLI'
+#!/bin/bash
+printf '%s\n' '{"schemaVersion":"limitless.omarchy-agent-connection/0.1","status":"configured"}'
+CLI
+  chmod +x "$runtime/bin/python" "$runtime/bin/limitless-omarchy"
+  exit 0
+fi
+printf '%s\n' "${@: -1}" >"$PIP_SOURCE_LOG"
+""",
+        encoding="utf-8",
+    )
+    fake_python.chmod(0o755)
+    before = sorted(path.relative_to(ROOT) for path in ROOT.rglob("*") if path.is_file())
+    environment = {
+        **os.environ,
+        "PATH": f"{fake_bin}:{os.environ['PATH']}",
+        "XDG_DATA_HOME": str(data_home),
+        "PIP_SOURCE_LOG": str(pip_source_log),
+    }
+
+    completed = subprocess.run(
+        [str(runtime), "setup", "--plugin-root", str(ROOT)],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=environment,
+    )
+
+    pip_source = Path(pip_source_log.read_text(encoding="utf-8").strip())
+    assert pip_source.parent.parent == data_home / "limitless-omarchy"
+    assert pip_source.name == "package"
+    assert not pip_source.exists()
+    assert json.loads(completed.stdout)["status"] == "configured"
+    assert sorted(path.relative_to(ROOT) for path in ROOT.rglob("*") if path.is_file()) == before
 
 
 def test_panel_runtime_reports_setup_required_without_writing_to_the_system_python(tmp_path: Path) -> None:
@@ -202,6 +319,7 @@ printf '%s\n' '{"schemaVersion":"limitless.omarchy-publication-result/0.1","oper
     environment = {
         **os.environ,
         "XDG_DATA_HOME": str(data_home),
+        "XDG_CONFIG_HOME": str(tmp_path / "xdg-config"),
         "CAPTURED_ARGUMENTS": str(captured_arguments),
         "CAPTURED_INPUT": str(captured_input),
     }
@@ -215,7 +333,9 @@ printf '%s\n' '{"schemaVersion":"limitless.omarchy-publication-result/0.1","oper
         env=environment,
     )
 
-    assert captured_arguments.read_text(encoding="utf-8").strip() == "service-publication"
+    assert captured_arguments.read_text(encoding="utf-8").strip() == (
+        f"service-publication --activity-path {data_home / 'limitless-omarchy' / 'activity.json'}"
+    )
     assert json.loads(captured_input.read_text(encoding="utf-8")) == payload
     assert "/home/user/reviewed" not in captured_arguments.read_text(encoding="utf-8")
     assert json.loads(completed.stdout)["operation"] == "publish"
@@ -238,6 +358,7 @@ printf '%s\\n' '{"schemaVersion":"limitless.omarchy-agent-connection-report/0.1"
     environment = {
         **os.environ,
         "XDG_DATA_HOME": str(data_home),
+        "XDG_CONFIG_HOME": str(tmp_path / "xdg-config"),
         "CAPTURED_ARGUMENTS": str(captured_arguments),
     }
 
@@ -264,9 +385,18 @@ printf '%s\\n' '{"schemaVersion":"limitless.omarchy-agent-connection-report/0.1"
         "--runtime-cli",
         str(runtime_bin / "limitless-omarchy"),
         "--catalog",
-        str(ROOT / "examples" / "catalog"),
+        str(data_home / "limitless-omarchy" / "catalog"),
     ]
-    assert arguments[7:] == ["--additional-agent", "claude"]
+    assert arguments[7:] == [
+        "--settings-path",
+        str(tmp_path / "xdg-config" / "limitless-omarchy" / "settings.json"),
+        "--drafts-path",
+        str(data_home / "limitless-omarchy" / "drafts"),
+        "--activity-path",
+        str(data_home / "limitless-omarchy" / "activity.json"),
+        "--additional-agent",
+        "claude",
+    ]
     assert json.loads(completed.stdout)["schemaVersion"] == "limitless.omarchy-agent-connection-report/0.1"
 
 
@@ -286,8 +416,12 @@ def test_visual_harness_renders_the_production_scroll_surface() -> None:
 
     assert "source: root.panelContentsPath" in harness
     assert '"/preview.png"' in harness
+    assert '"/agents.png"' in harness
+    assert '"/stats.png"' in harness
+    assert '"/about.png"' in harness
     assert '"/service-top.png"' in harness
-    assert '"/service-bottom.png"' in harness
+    assert '"/quota.png"' in harness
+    assert '"/library-settings.png"' in harness
     assert "scroll.contentY = Math.max(0, scroll.contentHeight - scroll.height)" in harness
 
 

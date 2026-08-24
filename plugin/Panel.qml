@@ -14,11 +14,30 @@ Item {
   property var shell: null
   property var manifest: null
   property bool opened: false
-  property string catalogPath: ""
+  property string activeSection: "library"
+  property bool settingsModalOpen: false
+  property bool settingsLoaded: false
+  property string settingsDefaultDestination: "local"
+  property string settingsContributionMode: "agent-mediated"
+  property string settingsMaterialPolicy: "methods-only"
+  property string settingsPublicPolicyDigest: ""
+  property string pendingDefaultDestination: "local"
+  property string pendingContributionMode: "agent-mediated"
+  property string pendingMaterialPolicy: "methods-only"
+  property var draftItems: []
+  property int draftTotal: 0
+  property int draftPending: 0
+  property string draftManageRef: ""
+  property bool agentOptionsExpanded: false
+  property bool serviceDetailsExpanded: false
   property string serviceObjective: ""
   property string omarchyRelease: ""
   property bool serviceExpanded: false
   property bool serviceReady: false
+  property bool serviceStatusKnown: false
+  property bool serviceUsageExceeded: false
+  property string serviceUsageResetsAt: ""
+  property string serviceUpgradeUrl: "https://limitlesslibrary.com/#contact"
   property string serviceSummary: "No managed-service request has been made."
   property string serviceArtifactHandoffStatePath: ""
   property string serviceArtifactStagedPath: ""
@@ -29,15 +48,10 @@ Item {
   property string serviceArtifactInstallationStatePath: ""
   property bool serviceArtifactEnableAvailable: false
   property string serviceArtifactAdoptionReceiptPath: ""
-  property bool publicationExpanded: false
-  property string publicationDraftPath: ""
-  property string publicationStatePath: ""
-  property bool publicationPolicyAccepted: false
   property bool publicationPolicyReady: false
   property string publicationPolicyUrl: ""
   property string publicationPolicyDigest: ""
   property string publicationPolicySummary: "Inspect the trust boundary to load the current public publication policy."
-  property bool publicationWithdrawalArmed: false
   property string defaultAgent: ""
   property var additionalAgentIds: []
   property var agentOptions: [
@@ -53,8 +67,24 @@ Item {
   ]
   property string agentSummary: "The current Omarchy default will be connected after local setup."
   property string agentReportPath: ""
-  property string publicationSummary: "No public contribution has been submitted."
-  property string publicationOperation: ""
+  property bool agentReportNeeded: false
+  property bool statsAvailable: true
+  property int statsQueries: 0
+  property int statsLocalQueries: 0
+  property int statsServiceQueries: 0
+  property int statsGeneralQueries: 0
+  property int statsExactComponents: 0
+  property int statsSourceFreeMethods: 0
+  property int statsAbstentions: 0
+  property int statsReviews: 0
+  property int statsInstalls: 0
+  property int statsAdoptions: 0
+  property int statsPublications: 0
+  property int statsWithdrawals: 0
+  property int statsDrafts: 0
+  property int statsAgentsConnected: 0
+  property int statsAgentsAttention: 0
+  property bool statsServiceConnected: false
   property bool runtimeReady: false
   property string headline: "Set up Limitless Library"
   property string detail: "Create an isolated local runtime to begin. Nothing will be shared."
@@ -72,9 +102,22 @@ Item {
   function open(payloadJson) {
     var payload = {}
     try { payload = JSON.parse(payloadJson || "{}") || {} } catch (e) {}
-    if (payload.catalogPath !== undefined) catalogPath = String(payload.catalogPath)
     if (payload.omarchyRelease !== undefined) omarchyRelease = String(payload.omarchyRelease)
+    var requestedSection = String(payload.section || "library")
+    var supportedSections = ["library", "agents", "service", "stats", "about"]
+    activeSection = supportedSections.indexOf(requestedSection) >= 0
+      ? requestedSection
+      : "library"
+    agentOptionsExpanded = false
+    serviceDetailsExpanded = false
+    settingsModalOpen = false
+    draftManageRef = ""
     serviceReady = false
+    serviceStatusKnown = false
+    serviceUsageExceeded = false
+    serviceUsageResetsAt = ""
+    serviceUpgradeUrl = "https://limitlesslibrary.com/#contact"
+    serviceExpanded = false
     serviceSummary = "No managed-service request has been made."
     serviceArtifactHandoffStatePath = ""
     serviceArtifactStagedPath = ""
@@ -85,11 +128,10 @@ Item {
     serviceArtifactInstallationStatePath = ""
     serviceArtifactEnableAvailable = false
     serviceArtifactAdoptionReceiptPath = ""
-    publicationPolicyAccepted = false
     publicationPolicyReady = false
     publicationPolicyUrl = ""
     publicationPolicyDigest = ""
-    publicationWithdrawalArmed = false
+    agentReportNeeded = false
     opened = true
     refresh()
     Qt.callLater(function() { if (opened) keyCatcher.forceActiveFocus() })
@@ -98,8 +140,6 @@ Item {
   function close() {
     opened = false
     serviceObjective = ""
-    publicationPolicyAccepted = false
-    publicationWithdrawalArmed = false
     pendingInput = ""
     if (command.running) command.running = false
   }
@@ -111,11 +151,112 @@ Item {
   }
 
   function refresh() {
-    runRuntime("status", [])
+    runRuntime("panel-state", [])
   }
 
   function installRuntime() {
     runRuntime("setup", [])
+  }
+
+  function selectSection(section) {
+    var requested = String(section)
+    if (settingsModalOpen) {
+      settingsModalOpen = false
+      resetPendingSettings()
+    }
+    activeSection = requested
+    if (activeSection === "service") serviceExpanded = true
+    errorText = ""
+    if (activeSection === "stats" && runtimeReady) refreshStats()
+  }
+
+  function resetPendingSettings() {
+    pendingDefaultDestination = settingsDefaultDestination
+    pendingContributionMode = settingsContributionMode
+    pendingMaterialPolicy = settingsMaterialPolicy
+  }
+
+  function openSettings() {
+    resetPendingSettings()
+    settingsModalOpen = true
+    errorText = ""
+  }
+
+  function saveSettings() {
+    var publicPolicyDigest = null
+    if (pendingDefaultDestination === "public") {
+      if (!serviceReady || !publicationPolicyReady || publicationPolicyDigest === "") {
+        errorText = "Connect and verify the service before authorizing public sharing."
+        return
+      }
+      publicPolicyDigest = publicationPolicyDigest
+    }
+    runRuntime("settings-apply", [], JSON.stringify({
+      schemaVersion: "limitless.omarchy-owner-settings/0.1",
+      defaultDestination: pendingDefaultDestination,
+      contributionMode: pendingContributionMode,
+      materialPolicy: pendingMaterialPolicy,
+      publicPolicyDigest: publicPolicyDigest
+    }))
+  }
+
+  function refreshDrafts() {
+    if (runtimeReady) runRuntime("draft-list", [])
+  }
+
+  function toggleDraftManagement(draftRef) {
+    var selected = String(draftRef || "")
+    draftManageRef = draftManageRef === selected ? "" : selected
+    errorText = ""
+  }
+
+  function transitionDraft(draftRef, destination) {
+    var selectedDestination = String(destination || "")
+    var policyDigest = null
+    if (selectedDestination === "public") {
+      if (!serviceReady || !publicationPolicyReady || publicationPolicyDigest === "") {
+        errorText = "Connect and verify the service before moving a method to Public."
+        return
+      }
+      policyDigest = publicationPolicyDigest
+    }
+    runRuntime("contribution-transition", [], JSON.stringify({
+      schemaVersion: "limitless.method-sharing-transition-input/0.1",
+      draftRef: String(draftRef || ""),
+      destination: selectedDestination,
+      publicPolicyDigest: policyDigest
+    }))
+  }
+
+  function connectServiceFromLibrary() {
+    selectSection("service")
+  }
+
+  function openLibrarySettings() {
+    selectSection("library")
+    openSettings()
+  }
+
+  function openOfficialUrl(url) {
+    var target = String(url || "")
+    var allowed = [
+      "https://limitlesslibrary.com",
+      "https://limitlesslibrary.com/#contact",
+      "https://univeracity.com",
+      "https://github.com/Univeracity/limitless-omarchy"
+    ]
+    if (allowed.indexOf(target) !== -1) Qt.openUrlExternally(target)
+  }
+
+  function formatUsageReset(value) {
+    var selected = String(value || "")
+    var parsed = new Date(selected)
+    if (!selected || isNaN(parsed.getTime())) return selected || "soon"
+    return Qt.formatDateTime(parsed, "MMM d, yyyy · h:mm AP")
+  }
+
+  function openUsageUpgrade() {
+    openOfficialUrl(serviceUpgradeUrl)
   }
 
   function agentLabel(agentId) {
@@ -154,16 +295,19 @@ Item {
     runRuntime("agent-disconnect", [])
   }
 
-  function queryCatalog() {
-    if (catalogPath.trim() === "") {
-      errorText = "Choose a readable local catalog before querying it."
-      return
-    }
-    runRuntime("query", ["--catalog", catalogPath.trim()])
+  function refreshStats() {
+    if (runtimeReady) runRuntime("stats", [])
   }
 
-  function queryExample() {
-    runRuntime("query-demo", [])
+  function queryCatalog() {
+    if (serviceObjective.trim() === "") {
+      errorText = "Describe the customization to check locally."
+      return
+    }
+    runRuntime("query", [], JSON.stringify({
+      schemaVersion: "limitless.omarchy-local-query-input/0.1",
+      objective: serviceObjective.trim()
+    }))
   }
 
   function activateService() {
@@ -237,68 +381,12 @@ Item {
     runRuntime("service-artifact-enable", [], input)
   }
 
-  function publishContribution() {
-    if (!serviceReady) {
-      errorText = "Enable the official service before publishing."
-      return
-    }
-    if (!publicationDraftPath.trim().startsWith("/")) {
-      errorText = "Choose an absolute path to one reviewed publication draft."
-      return
-    }
-    if (!publicationPolicyAccepted) {
-      errorText = "Review and accept the advertised public publication policy for this submission."
-      return
-    }
-    if (!publicationPolicyReady || publicationPolicyDigest === "") {
-      errorText = "Inspect the current public publication policy before publishing."
-      return
-    }
-    runPublication("publish", publicationDraftPath.trim(), "", publicationPolicyDigest, null)
-  }
-
-  function inspectPublication() {
-    if (!publicationStatePath.trim().startsWith("/")) {
-      errorText = "Choose the absolute local state path for this publication."
-      return
-    }
-    publicationWithdrawalArmed = false
-    runPublication("status", "", publicationStatePath.trim(), null, null)
-  }
-
-  function withdrawPublication() {
-    if (!publicationStatePath.trim().startsWith("/")) {
-      errorText = "Choose the absolute local state path for this publication."
-      return
-    }
-    if (!publicationWithdrawalArmed) {
-      publicationWithdrawalArmed = true
-      publicationSummary = "Withdrawal is durable. Select confirm only if this release should stop being eligible."
-      return
-    }
-    publicationWithdrawalArmed = false
-    runPublication("revoke", "", publicationStatePath.trim(), null, "publisher-withdrawal")
-  }
-
   function openPublicationPolicy() {
     if (!publicationPolicyReady || !publicationPolicyUrl.startsWith("https://")) {
       errorText = "The verified publication policy URL is unavailable."
       return
     }
     Qt.openUrlExternally(publicationPolicyUrl)
-  }
-
-  function runPublication(nextOperation, draftPath, statePath, acceptedDigest, reasonCode) {
-    publicationOperation = nextOperation
-    var input = JSON.stringify({
-      schemaVersion: "limitless.omarchy-publication-input/0.1",
-      operation: nextOperation,
-      draftPath: draftPath === "" ? null : draftPath,
-      statePath: statePath === "" ? null : statePath,
-      acceptedPublicationPolicyDigest: acceptedDigest,
-      reasonCode: reasonCode
-    })
-    runRuntime("service-publication", [], input)
   }
 
   function runRuntime(nextOperation, arguments, stdinPayload) {
@@ -325,12 +413,72 @@ Item {
       errorText = "The local adapter returned invalid JSON."
       return
     }
+    if (value.schemaVersion === "limitless.omarchy-stats/0.1") {
+      var queries = value.queries || {}
+      var lifecycle = value.lifecycle || {}
+      var agents = value.agents || {}
+      statsAvailable = value.available !== false
+      statsQueries = Number(queries.total || 0)
+      statsLocalQueries = Number(queries.local || 0)
+      statsServiceQueries = Number(queries.service || 0)
+      statsGeneralQueries = Number(queries.general || 0)
+      statsExactComponents = Number(queries.exactComponents || 0)
+      statsSourceFreeMethods = Number(queries.sourceFreeMethods || 0)
+      statsAbstentions = Number(queries.abstentions || 0)
+      statsReviews = Number(lifecycle.reviews || 0)
+      statsInstalls = Number(lifecycle.installs || 0)
+      statsAdoptions = Number(lifecycle.adoptions || 0)
+      statsPublications = Number(lifecycle.publications || 0)
+      statsWithdrawals = Number(lifecycle.withdrawals || 0)
+      statsDrafts = Number(lifecycle.drafts || 0)
+      statsAgentsConnected = Number(agents.connected || 0)
+      statsAgentsAttention = Number(agents.attention || 0)
+      statsServiceConnected = value.serviceConnected === true
+      return
+    }
+    if (value.schemaVersion === "limitless.omarchy-settings-result/0.1") {
+      var ownerSettings = value.settings || {}
+      settingsDefaultDestination = String(ownerSettings.defaultDestination || "local")
+      settingsContributionMode = String(ownerSettings.contributionMode || "agent-mediated")
+      settingsMaterialPolicy = String(ownerSettings.materialPolicy || "methods-only")
+      settingsPublicPolicyDigest = String(ownerSettings.publicPolicyDigest || "")
+      settingsLoaded = true
+      resetPendingSettings()
+      if (value.saved === true) {
+        settingsModalOpen = false
+        headline = "Library settings saved"
+        detail = settingsDefaultDestination === "off"
+          ? "Method contribution is off. Local and service discovery settings are unchanged."
+          : "New reusable methods will follow the saved " + settingsDefaultDestination + " destination policy."
+      }
+      return
+    }
+    if (value.schemaVersion === "limitless.omarchy-draft-list/0.1") {
+      draftItems = Array.isArray(value.items) ? value.items : []
+      draftTotal = Number(value.total || 0)
+      draftPending = Number(value.pending || 0)
+      return
+    }
+    if (value.schemaVersion === "limitless.method-sharing-transition/0.1") {
+      headline = "Method availability updated"
+      detail = "The selected method now targets " + String(value.destination || "local")
+        + ". Transfer and withdrawal work continues safely in the background."
+      return
+    }
+    if (value.schemaVersion === "limitless.omarchy-panel-state/0.1") {
+      if (value.status) applyResult(JSON.stringify(value.status))
+      if (value.settings) applyResult(JSON.stringify(value.settings))
+      if (value.drafts) applyResult(JSON.stringify(value.drafts))
+      if (value.agents) applyResult(JSON.stringify(value.agents))
+      if (value.stats) applyResult(JSON.stringify(value.stats))
+      return
+    }
     if (value.schemaVersion === "limitless.omarchy-status/0.1") {
       disposition = "status"
       runtimeReady = String(value.mode || "") === "local-only"
       headline = runtimeReady ? "Local Library ready" : "Set up Limitless Library"
       detail = runtimeReady
-        ? "Choose a local catalog below, inspect the included example, or explicitly open the optional service section."
+        ? "Check approved local work below, or open the service for public and shared reuse."
         : "Create an isolated local runtime to begin. Nothing will be shared."
       selectionReference = ""
       return
@@ -342,11 +490,12 @@ Item {
       agentReportPath = String(value.reportPath || "")
       var connections = Array.isArray(value.connections) ? value.connections : []
       var defaultStatus = ""
+      var statusAttentionCount = 0
       for (var connectionIndex = 0; connectionIndex < connections.length; connectionIndex += 1) {
         var connection = connections[connectionIndex] || {}
+        if (String(connection.status || "") !== "connected") statusAttentionCount += 1
         if (String(connection.agent || "") === defaultAgent) {
           defaultStatus = String(connection.status || "")
-          break
         }
       }
       if (defaultAgent === "") {
@@ -358,6 +507,7 @@ Item {
       } else {
         agentSummary = "Default: " + agentLabel(defaultAgent) + " · local MCP is not connected. Select Connect to retry."
       }
+      agentReportNeeded = defaultAgent === "" || statusAttentionCount > 0
       return
     }
     if (value.schemaVersion === "limitless.omarchy-agent-connection-report/0.1") {
@@ -380,13 +530,17 @@ Item {
       agentSummary = attentionCount > 0
         ? "Some agent targets need attention. Details are saved locally."
         : "Selected agent connections are ready."
+      agentReportNeeded = attentionCount > 0
       selectionReference = ""
       return
     }
     if (value.schemaVersion === "limitless.omarchy-service-status/0.1") {
       disposition = "status"
+      serviceStatusKnown = true
       serviceReady = String(value.mode || "") === "managed-service-ready"
-      publicationPolicyAccepted = false
+      serviceUsageExceeded = false
+      serviceUsageResetsAt = ""
+      serviceUpgradeUrl = "https://limitlesslibrary.com/#contact"
       if (serviceReady) {
         var service = value.service || {}
         var policy = value.policy || {}
@@ -405,9 +559,13 @@ Item {
           + String(service.defaultAudience || "private") + " · "
           + String(service.historyMode || "local-only") + " · "
           + String(policy.digest || "policy unavailable")
+      } else if (String(value.mode || "") === "service-not-enabled") {
+        publicationPolicyReady = false
+        publicationPolicyUrl = ""
+        publicationPolicyDigest = ""
+        serviceSummary = "Service discovery is not enabled. Local reuse remains available."
       } else {
         publicationPolicyReady = false
-        publicationPolicyAccepted = false
         headline = "Managed service unavailable"
         detail = "Local Library use remains available. No remote selection was fabricated."
         serviceSummary = "Service unavailable; local reuse remains available."
@@ -417,8 +575,16 @@ Item {
     }
     if (value.schemaVersion === "limitless.omarchy-service-result/0.1") {
       runtimeReady = true
+      serviceStatusKnown = true
       disposition = String(value.disposition || "abstain")
       var serviceSelection = value.selection || null
+      var usage = value.usage || null
+      serviceUsageExceeded = value.reason === "free-usage-exceeded"
+      serviceUsageResetsAt = serviceUsageExceeded && usage
+        ? String(usage.resetAt || "") : ""
+      serviceUpgradeUrl = serviceUsageExceeded && usage
+        && String(usage.upgradeUrl || "") === "https://limitlesslibrary.com/#contact"
+        ? String(usage.upgradeUrl) : "https://limitlesslibrary.com/#contact"
       serviceArtifactHandoffStatePath = String(value.handoffStatePath || "")
       serviceArtifactStageAvailable = disposition === "exact-component"
         && serviceArtifactHandoffStatePath.startsWith("/")
@@ -431,7 +597,8 @@ Item {
       serviceArtifactAdoptionReceiptPath = ""
       selectionReference = serviceSelection && serviceSelection.title
         ? String(serviceSelection.title)
-        : String(value.requestDigest || "")
+        : serviceUsageExceeded || value.reason === "service-unavailable-local-still-available"
+          ? "" : String(value.requestDigest || "")
       if (disposition === "exact-component") {
         var immutable = serviceSelection && serviceSelection.immutable ? serviceSelection.immutable : {}
         headline = "Verified component available"
@@ -442,18 +609,23 @@ Item {
         headline = "Verified method available"
         detail = String(serviceMethod.summary || serviceSelection.summary || "Apply the source-free method locally.")
       } else {
-        headline = value.reason === "service-unavailable-local-still-available"
-          ? "Managed service unavailable"
-          : "Start fresh"
-        detail = value.reason === "service-unavailable-local-still-available"
-          ? "The managed query could not complete. Local Library use remains available."
-          : "No eligible managed result was selected. No candidate details were disclosed."
+        headline = serviceUsageExceeded
+          ? "Free usage exceeded"
+          : value.reason === "service-unavailable-local-still-available"
+            ? "Managed service unavailable"
+            : "Start fresh"
+        detail = serviceUsageExceeded
+          ? "Local Library use remains available while free service usage resets."
+          : value.reason === "service-unavailable-local-still-available"
+            ? "The managed query could not complete. Local Library use remains available."
+            : "No eligible managed result was selected. No candidate details were disclosed."
       }
       serviceReady = value.reason !== "service-unavailable-local-still-available"
-      publicationPolicyAccepted = false
-      serviceSummary = serviceReady
-        ? "Signed service result verified against the activated authority."
-        : "Service unavailable; local reuse remains available."
+      serviceSummary = serviceUsageExceeded
+        ? "Free usage exceeded. Resets: " + formatUsageReset(serviceUsageResetsAt)
+        : serviceReady
+          ? "Signed service result verified against the activated authority."
+          : "Service unavailable; local reuse remains available."
       return
     }
     if (value.schemaVersion === "limitless.omarchy-artifact-stage-result/0.1") {
@@ -519,29 +691,6 @@ Item {
         : "Local adoption evidence: " + serviceArtifactAdoptionReceiptPath
       return
     }
-    if (value.schemaVersion === "limitless.omarchy-publication-result/0.1") {
-      runtimeReady = true
-      var publicationAction = String(value.operation || "")
-      var admission = String(value.admissionState || "unknown")
-      publicationStatePath = String(value.statePath || publicationStatePath)
-      selectionReference = String(value.submissionRef || "")
-      if (publicationAction === "publish") {
-        headline = "Contribution submitted"
-        detail = "Only the files explicitly named by the reviewed draft were considered. Admission state: " + admission + "."
-        publicationSummary = String(value.uploadedObjectCount || 0) + " missing object(s) uploaded · " + admission
-      } else if (publicationAction === "revoke") {
-        headline = "Contribution withdrawn"
-        detail = "The active public release was withdrawn through the same anonymous installation authority."
-        publicationSummary = "Withdrawn · " + admission
-      } else {
-        headline = "Contribution status verified"
-        detail = "Current admission state: " + admission + ". No source bytes were resent."
-        publicationSummary = "Status · " + admission
-      }
-      publicationPolicyAccepted = false
-      publicationOperation = ""
-      return
-    }
     runtimeReady = true
     disposition = String(value.disposition || "abstain")
     var selected = value.decision && value.decision.selected ? value.decision.selected : null
@@ -572,8 +721,6 @@ Item {
       if (root.pendingInput !== "") command.write(root.pendingInput + "\n")
       root.pendingInput = ""
       if (root.operation === "service-query") root.serviceObjective = ""
-      if (root.operation === "service-publication" && root.publicationOperation === "publish")
-        root.publicationPolicyAccepted = false
     }
     stdout: StdioCollector {
       waitForEnd: true
@@ -584,17 +731,34 @@ Item {
       onStreamFinished: root.commandError = String(text || "").trim()
     }
     onExited: function(exitCode) {
-      if (!root.opened) return
+      // Treat `running` as requested process state as well as observed state.
+      // Clearing it explicitly keeps short-lived commands from leaving the
+      // panel in a permanent busy presentation on Quickshell builds that do
+      // not reset the writable property before delivering `exited`.
+      command.running = false
+      if (!root.opened) {
+        if (exitCode === 0 && root.operation === "status") root.applyResult(root.commandOutput)
+        root.pendingInput = ""
+        root.operation = ""
+        return
+      }
       var completedOperation = root.operation
       if (exitCode === 0) root.applyResult(root.commandOutput)
       else root.errorText = root.commandError !== "" ? root.commandError : "The local runtime is unavailable."
       root.pendingInput = ""
       root.operation = ""
-      root.publicationOperation = ""
-      if (completedOperation === "status" && root.runtimeReady)
-        Qt.callLater(function() { if (root.opened) root.refreshAgentStatus() })
+      if (completedOperation === "setup")
+        Qt.callLater(function() { if (root.opened) root.refresh() })
+      else if (completedOperation === "panel-state" && root.runtimeReady)
+        Qt.callLater(function() { if (root.opened) root.inspectService() })
+      else if (completedOperation === "settings-apply")
+        Qt.callLater(function() { if (root.opened && root.runtimeReady) root.refreshDrafts() })
+      else if (completedOperation === "contribution-transition")
+        Qt.callLater(function() { if (root.opened && root.runtimeReady) root.refreshDrafts() })
     }
   }
+
+  Component.onCompleted: Qt.callLater(function() { root.refresh() })
 
   PanelWindow {
     visible: root.opened

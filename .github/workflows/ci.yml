@@ -72,7 +72,8 @@ jobs:
         run: |
           python -m venv /tmp/limitless-omarchy-sdist
           /tmp/limitless-omarchy-sdist/bin/pip install dist/limitless_omarchy-*.tar.gz
-          /tmp/limitless-omarchy-sdist/bin/limitless-omarchy query --catalog examples/catalog > /tmp/limitless-omarchy-sdist-query.json
+          printf '%s\n' '{"schemaVersion":"limitless.omarchy-local-query-input/0.1","objective":"Create a distraction-free reading layout."}' \
+            | /tmp/limitless-omarchy-sdist/bin/limitless-omarchy query --catalog catalog > /tmp/limitless-omarchy-sdist-query.json
           /tmp/limitless-omarchy-sdist/bin/python -c "import json; assert json.load(open('/tmp/limitless-omarchy-sdist-query.json'))['disposition'] == 'source-free-method'"
 
   omarchy-contract:
@@ -98,7 +99,7 @@ jobs:
         run: |
           git init "$RUNNER_TEMP/omarchy-marketplace"
           git -C "$RUNNER_TEMP/omarchy-marketplace" remote add origin https://github.com/HANCORE-linux/omarchy-plugin-marketplace.git
-          git -C "$RUNNER_TEMP/omarchy-marketplace" fetch --depth=1 origin aa6d4be1b21ccb57cacd5f67d3ffd1f765c97237
+          git -C "$RUNNER_TEMP/omarchy-marketplace" fetch --depth=1 origin a9a1620b21065040ab4c0aba60289b08ab69cb99
           git -C "$RUNNER_TEMP/omarchy-marketplace" checkout --detach FETCH_HEAD
       - name: Verify marketplace baseline disposition
         run: |

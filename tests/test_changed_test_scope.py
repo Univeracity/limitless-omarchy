@@ -33,10 +33,44 @@ def test_agent_connection_change_selects_its_focused_tests_and_package_gate() ->
     assert result["packageGateRequired"] is True
 
 
+def test_contribution_change_selects_its_focused_tests() -> None:
+    result = plan("src/limitless_omarchy/contributions.py")
+
+    assert result["mode"] == "targeted"
+    assert result["tests"] == ["tests/test_contributions.py"]
+    assert result["packageGateRequired"] is True
+
+
+def test_mcp_change_selects_query_and_contribution_contracts() -> None:
+    result = plan("src/limitless_omarchy/mcp_server.py")
+
+    assert result["tests"] == ["tests/test_adapter.py", "tests/test_contributions.py"]
+
+
 def test_qml_change_selects_plugin_and_visual_contracts() -> None:
     result = plan("plugin/PanelContents.qml")
 
     assert result["tests"] == ["tests/test_plugin_contract.py"]
+    assert result["omarchyContractRequired"] is True
+    assert result["visualGateRecommended"] is True
+
+
+def test_catalog_move_and_preview_select_only_their_release_contracts() -> None:
+    result = plan("examples/catalog/legacy.json", "catalog/current.json", "preview.png")
+
+    assert result["mode"] == "targeted"
+    assert result["tests"] == ["tests/test_adapter.py", "tests/test_plugin_contract.py"]
+    assert result["packageGateRequired"] is True
+    assert result["omarchyContractRequired"] is True
+    assert result["visualGateRecommended"] is True
+
+
+def test_visual_asset_selects_plugin_release_and_visual_contracts() -> None:
+    result = plan("assets/univeracity-logo.png")
+
+    assert result["mode"] == "targeted"
+    assert result["tests"] == ["tests/test_plugin_contract.py"]
+    assert result["packageGateRequired"] is True
     assert result["omarchyContractRequired"] is True
     assert result["visualGateRecommended"] is True
 

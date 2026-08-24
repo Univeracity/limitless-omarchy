@@ -14,7 +14,7 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: "L"
+    text: "<"
     tooltipText: "Limitless Library"
 
     onPressed: function(mouseButton) {

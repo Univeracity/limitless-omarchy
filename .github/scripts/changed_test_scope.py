@@ -12,8 +12,10 @@ from pathlib import Path, PurePosixPath
 
 ALL_TESTS = (
     "tests/test_adapter.py",
+    "tests/test_activity.py",
     "tests/test_agent_connection.py",
     "tests/test_changed_test_scope.py",
+    "tests/test_contributions.py",
     "tests/test_plugin_contract.py",
 )
 DOC_PREFIXES = ("docs/",)
@@ -83,18 +85,46 @@ def plan_changes(paths: Iterable[str]) -> dict[str, object]:
             tests.add("tests/test_agent_connection.py")
             package_gate = True
             reasons.append("agent connection adapter changed")
+        elif raw == "src/limitless_omarchy/activity.py":
+            tests.add("tests/test_activity.py")
+            package_gate = True
+            reasons.append("private activity projection changed")
+        elif raw in {
+            "src/limitless_omarchy/contributions.py",
+            "src/limitless_omarchy/drafts.py",
+            "src/limitless_omarchy/settings.py",
+        }:
+            tests.add("tests/test_contributions.py")
+            package_gate = True
+            reasons.append(f"method contribution lifecycle changed: {raw}")
+        elif raw == "src/limitless_omarchy/mcp_server.py":
+            tests.update({"tests/test_adapter.py", "tests/test_contributions.py"})
+            package_gate = True
+            reasons.append("Omarchy-aware MCP surface changed")
         elif raw.startswith("src/limitless_omarchy/") and path.suffix == ".py":
             tests.add("tests/test_adapter.py")
             package_gate = True
             reasons.append(f"Python adapter changed: {raw}")
-        elif raw.startswith("examples/"):
+        elif raw.startswith(("catalog/", "examples/catalog/")):
             tests.add("tests/test_adapter.py")
             package_gate = True
-            reasons.append(f"bundled example changed: {raw}")
+            reasons.append(f"bundled local catalog changed: {raw}")
+        elif raw == "preview.png":
+            tests.add("tests/test_plugin_contract.py")
+            package_gate = True
+            omarchy_contract = True
+            visual_gate = True
+            reasons.append("marketplace preview changed")
+        elif raw.startswith("assets/"):
+            tests.add("tests/test_plugin_contract.py")
+            package_gate = True
+            omarchy_contract = True
+            visual_gate = True
+            reasons.append(f"plugin visual asset changed: {raw}")
         elif raw in ALL_TESTS:
             tests.add(raw)
             reasons.append(f"test changed: {raw}")
-        elif raw == "README.md" or raw == "SECURITY.md" or raw.startswith(DOC_PREFIXES):
+        elif raw in {"README.md", "SECURITY.md", "examples/README.md"} or raw.startswith(DOC_PREFIXES):
             reasons.append(f"documentation-only change: {raw}")
         elif raw in {".gitignore", ".gitattributes", "LICENSE", "NOTICE"}:
             reasons.append(f"repository metadata changed: {raw}")

@@ -55,7 +55,8 @@ repo_root=$(cd -- "$(dirname -- "$0")/.." && pwd -P)
 plugin_id=$(jq -er '.id' "$repo_root/manifest.json")
 
 omarchy plugin validate "$repo_root"
-limitless-omarchy query --catalog "$catalog"
+printf '%s\n' '{"schemaVersion":"limitless.omarchy-local-query-input/0.1","objective":"Check the local Library smoke path."}' \
+  | limitless-omarchy query --catalog "$catalog"
 
 if ((summon == 0)); then
   printf '%s\n' 'Native validation and local query completed. Re-run with --summon to open an already installed panel.'
@@ -70,6 +71,5 @@ omarchy plugin list --json | jq -e --arg id "$plugin_id" '
   exit 2
 }
 
-payload=$(jq -cn --arg catalog "$catalog" '{catalogPath: $catalog}')
-omarchy-shell shell summon "$plugin_id" "$payload"
+omarchy-shell shell summon "$plugin_id" '{}'
 printf '%s\n' 'Panel summoned. Confirm its visible local-only/result state, then dismiss it with Escape.'

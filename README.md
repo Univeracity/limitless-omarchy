@@ -1,361 +1,283 @@
-# Limitless Library for Omarchy
+<p align="center">
+  <img src="assets/limitless-library-logo.png" alt="Limitless Library" width="104">
+</p>
 
-Local-first verified reuse for Omarchy customizations and, when explicitly
-enabled, general local agent work.
+<h1 align="center">Limitless Library for Omarchy</h1>
 
-Before an agent creates a new customization, this adapter lets it ask whether
-one owner-authorized prior result is eligible for the current Omarchy receiver.
-It returns one exact component, one source-free method, or a safe abstention.
+<p align="center">
+  <strong>Ask before you build. Reuse what fits. Prove it worked.</strong><br>
+  Local-first verified reuse for Omarchy customizations and general agent work.
+</p>
 
-This repository contains a native Quattro panel, its companion CLI, and an
-opt-in client for the public managed-service wire contract. It is not an
-Omarchy plugin directory or package manager.
-Omarchy's Git-based plugin ecosystem remains responsible for ordinary public
-plugin distribution.
+<p align="center">
+  <a href="https://limitlesslibrary.com">Website</a> ·
+  <a href="https://github.com/Univeracity/limitlesslibrary">Library core</a> ·
+  <a href="docs/COMPATIBILITY.md">Compatibility</a> ·
+  <a href="SECURITY.md">Security</a>
+</p>
 
-## What is different
+Your agent is about to customize Omarchy. Instead of starting from zero,
+Limitless first checks whether approved work already fits this machine and this
+task. One concise objective goes in; one exact component, one source-free
+method, or a safe “start fresh” comes back.
 
-Most useful Omarchy work will never be polished into a public plugin. A recent
-agent-created panel adjustment, workflow, or local integration can still become
-a private Work Capsule. The Library can consult eligible capsules before more
-arbitrary work is created, while the owner retains control over capture and
-sharing.
+> **The money shot:** prior agent work becomes reusable infrastructure without
+> blindly copying code, leaking a workspace, or making the agent spend more
+> time thinking about reuse than the reuse can save.
 
-Public Omarchy Plugins are one possible source of exact components. They are
-not a prerequisite for local capture, local reuse, private cross-device reuse,
-or a source-free method.
+```text
+Intent → query before work → exact component / source-free method / abstain
+       → receiver-local verification → observed adoption → useful work compounds
+```
 
-## Local-first boundary
+![Limitless Library running in Omarchy](preview.png)
 
-The adapter works without a Limitless account or service connection. Its panel
-runtime and optional companion CLI:
+## Good work should not keep starting over
 
-- derives only a minimal receiver profile;
-- does not inspect the user's plugin list, arbitrary desktop configuration,
-  prompts, screenshots, command history, or agent workspace (except the
-  host-owned default-agent setting during an explicit agent connection);
-- does not silently install or enable a desktop plugin; and
-- leaves decisions and evidence local.
+Search can find prior work. It cannot establish that the work is allowed,
+compatible, unchanged, or actually used.
 
-The managed Limitless implementation remains outside this repository. A
-supported release can pin its official service identity, trust root, profile,
-and policy in the public Library dependency. Enabling it is always explicit.
-Connecting never publishes local work; capture and sharing remain separate
-actions.
+Limitless Library lets an agent check before material work whether one approved
+prior result fits the receiving environment. It returns one of three things:
 
-## Use it from Omarchy
+- an exact component, kept byte-for-byte and verified by the receiver;
+- a source-free method to apply freshly in the current environment; or
+- a non-disclosing abstention when no safe selection can be made.
 
-Add and enable the reviewed repository through **Setup › Plugins**. The
-Limitless Library `L` button will appear in the right side of the bar. Click
-it, then select **Install local runtime**. The panel creates its own isolated
-runtime beneath your XDG data directory; it does not alter the system Python,
-require an agent-side setup step before use, or connect to a service.
+This plugin makes that lifecycle feel native to Omarchy. It includes a Quattro
+panel and bar widget, a private per-user runtime, a local catalog, automatic
+connection to the owner's chosen Omarchy agent where supported, and optional
+access to the Limitless Library service. The CLI is available for lower-level
+control, but ordinary use stays in the UI.
 
-The first explicit setup needs Python 3 and network access to install the
-pinned public Library dependency into that isolated runtime. That same explicit
-setup action also makes Limitless available to the agent currently chosen under
-**Setup › Defaults › Agent**, when its current client has a verified MCP
-configuration path. The panel creates only its own named local MCP entry and
-verifies it before treating it as connected. It never replaces another server
-or rewrites an unrelated agent setting. Once complete, the panel itself is the
-normal way to use Limitless Omarchy:
+## Start in Omarchy
 
-1. Click **Try included example** to inspect a fully local source-free method.
-2. Paste an absolute path to an owner-controlled local catalog.
-3. Click **Query local catalog** before a material customization.
+Direct installation steps:
 
-Setup and query actions never install or enable a desktop change, capture a
-session, or share work. They create the per-user runtime after the explicit
-button press, query the catalog you select, and show a component, method, or
-safe abstention. A compatible managed exact component exposes later, separate
-review, install-disabled, and enable actions; none is inferred from the query.
+1. Choose the agent you normally use under **Setup › Defaults › Agent**.
+2. Open **Setup › Plugins**.
+3. Add `https://github.com/Univeracity/limitless-omarchy.git` and enable it
+   after Omarchy's review step.
+4. Select the Limitless `<` button on the right side of the bar.
+5. Select **Install local runtime**.
+6. Describe what you are about to make or change, then select
+   **Query local Library**.
 
-The **Agent connection** section shows the current Omarchy default, lets an
-owner select additional Omarchy agents, and reconciles each selected target
-independently. Codex, Claude Code, and Grok use their own native MCP commands;
-Antigravity CLI uses its documented standalone MCP profile. A selected client
-without a verified adapter is skipped rather than guessed, while other selected
-clients continue; the panel displays the local report path with the reason.
+The setup action creates an isolated runtime beneath the user's XDG data
+directory. It does not modify the system Python, require elevated privileges,
+or connect to a hosted service. It also offers Limitless to the agent selected
+under **Setup › Defaults › Agent** when that client has a verified MCP
+configuration path. Existing MCP entries are never overwritten.
+
+### MCP setup—without editing MCP files
+
+**Install local runtime** is also the normal MCP setup action:
+
+1. Limitless reads only the agent selected in Omarchy's default-agent setting.
+2. For a supported client, it creates its own `limitless-omarchy` MCP entry
+   with the exact panel-owned runtime command and local catalog.
+3. It reads the entry back and treats it as connected only when the command and
+   arguments match.
+4. The **Agents** tab shows the result and lets the owner opt additional agents
+   in. A collision or unsupported client is reported without changing it.
+
+The connected agent receives two deliberately small tools:
+
+- `omarchy_query_before_customization` — call before material Omarchy work with
+  the concise objective already in context;
+- `limitless_register_method` — call after useful work when the saved owner
+  policy says it should be retained.
+
+The MCP server itself instructs the agent to query first. No hand-authored JSON,
+terminal command, prompt duplication, repository path, or receiver profile is
+required from the user. Codex, Claude Code, Grok, and Antigravity CLI have
+verified setup adapters; unsupported clients remain untouched.
+
+The Library tab always begins locally:
+
+> Local reuse is available. Opt in for service discovery.
+
+After the owner connects the service, that state becomes:
+
+> Local reuse and service discovery are available.
+
+## What the panel provides
+
+| Surface | Purpose |
+| --- | --- |
+| **Library** | Query local or opted-in service discovery; configure contribution defaults. |
+| **Agents** | See the Omarchy default agent and optionally connect additional supported agents. |
+| **Service** | Inspect connection, identity, policy, usage, and account or organization state. |
+| **Stats** | View private aggregate Omarchy and general-Limitless activity. |
+| **?** | Read the project story, goals, license, and official links. |
+
+Queries never install or enable a desktop change. An exact component uses a
+separate review → install disabled → enable lifecycle through Omarchy's native
+validator. A source-free method is applied locally without transporting another
+user's source. If eligibility, rights, compatibility, integrity, or selection
+is uncertain, Limitless abstains and the agent starts fresh.
+
+The Stats surface stores aggregate counters only. It does not store objectives,
+prompts, paths, IDs, catalog metadata, or result contents.
+
+## Local first; service optional
+
+The plugin works without an account or service connection. Local decisions,
+catalog material, settings, and evidence remain under owner-controlled XDG
+paths.
+
+Selecting **Connect to Limitless Library service** performs one credential-free
+activation flow. The client verifies the release-pinned service identity, root
+history, policy digest, protocol, and result-signing keys before saving an
+anonymous installation identity. No API key, profile download, terminal, or
+agent-side setup is required.
+
+Service queries send the short objective and minimum declared receiver context.
+The objective is delivered to the panel-owned process over bounded stdin,
+cleared after dispatch, and kept out of argv and local files. Signed results
+must be current and bound to that exact query, policy, and receiver. If the
+service is unavailable, local reuse remains available.
+
+Connecting is not publishing. Sharing is controlled separately in **Library
+settings**.
+
+## Capture work without taxing the agent
+
+The Omarchy-aware MCP exposes query first and a compact
+`limitless_register_method` tool second. Registration requires only a name and
+steps. Limitless adds the opaque ID, digest, lineage, immutable local record,
+and catalog projection, then returns a short reference rather than echoing the
+method into the agent context.
+
+Owners choose both the destination and who initiates registration:
+
+- **Off** — do not register new reusable work.
+- **Local** — keep it private to this installation.
+- **Team / Organization** — retain the intended scope for an account-backed
+  sharing boundary.
+- **Public** — publish only through the verified service policy.
+
+Registration can be **Manual**, **Agent-mediated**, or **Automatic**. Saving
+Automatic + Public is explicit standing authorization for qualifying
+source-free methods. Local registration stays fast; transfer is resumable and
+does not block the originating agent. A policy change pauses publication until
+the owner saves against the new verified digest.
+
+Methods are independently authored and source-free. Exact-source publication
+is a separate owner choice. Local paths never enter public method material;
+optional public HTTPS references may accompany it.
+
+## Agent support
+
+The panel follows Omarchy's current default-agent setting and can optionally
+target additional agents. Each client is reconciled independently: an
+unsupported or changed client produces a local report without blocking the
+others.
+
 **Disconnect plugin-owned agent connections** removes only entries whose exact
-server command still matches the plugin-recorded descriptor.
+command still matches the descriptor created by this plugin.
 
-## Connect to Limitless Library service (optional)
-
-Local use is always available without a service connection. Open **Connect to
-Limitless Library service**, then select its connection action. That one
-action fetches the exact release-pinned, credential-free profile and verifies
-the service identity, original root, root-key history, policy digest, protocol,
-and result keys before saving activation state. It then creates one private,
-service-specific installation key and obtains a short-lived anonymous session.
-No account, profile download, API key, terminal, or agent setup is required. A
-build without published official trust material stays local-only.
-
-After inspection, enter one customization objective and select **Query managed
-service**. The panel sends that objective plus the minimal Omarchy receiver
-context under the activated audience and history boundary. The objective is
-sent to the panel-owned process over bounded stdin and cleared after dispatch;
-it is never placed in argv or a local file by the plugin.
-
-The result must be signed, current, bound to the exact query, policy-compatible,
-and receiver-compatible before the panel displays it. Service unavailability
-returns control to local reuse. Inspecting or querying never installs a plugin,
-captures local work, uploads a catalog, or enables sharing.
-
-When an exact artifact is selected, the panel saves its delivery authority only
-inside an owner-only, installation-signed continuation; the visible result does
-not contain that capability. **Prepare verified plugin review** redeems the
-continuation into a new digest-verified owner-only file, requires the signed
-portable exact-file-bundle descriptor, materializes its canonical file tree
-without overwrite, and runs `omarchy plugin validate` against that tree. The
-objective is not retained. The panel displays the receiver-owned review path
-and native result. If validation succeeds, **Install reviewed plugin disabled**
-copies those same exact bytes without overwrite into Omarchy's user plugin
-directory, rescans the native registry, and refuses to continue unless Omarchy
-reports the plugin as disabled. It saves a signed local installation state.
-**Enable reviewed plugin** is a second explicit action: it reverifies the
-installed inventory, asks Omarchy to enable it, confirms persisted native
-enablement, observes the plugin through Omarchy's runtime, and saves a signed
-local adoption receipt. Full-bar replacements fail closed because they do not
-have the ordinary disabled-to-enabled lifecycle.
-
-Public contribution is a separate, explicit panel action. Open **Share a
-reviewed contribution (optional)**, select one absolute path to a reviewed
-`limitless.publication-draft/1.0` file, inspect and accept the currently
-advertised policy for that submission, and select **Publish explicitly selected
-draft**. The panel binds that acceptance to the exact signed policy digest it
-displayed and refuses the submission if the service advertises a different
-digest. The draft itself names every regular file that may be considered;
-Limitless never scans the workspace or infers additional sources. The panel
-uploads only missing, digest-bound objects and saves owner-only resumable state
-beside the draft. That state can later check admission status or withdraw an
-active release from the same panel. Withdrawal requires a second confirmation.
-
-Omarchy currently opens a terminal for its third-party-plugin Add flow so that
-its review warning and clone output remain visible. That host-controlled step
-precedes this plugin. No terminal or agent-side setup is required to operate
-Limitless once the plugin has been reviewed and enabled.
+Owners who want the same installation to support non-Omarchy work can opt into
+the separate general provider. It exposes the standard read-only
+`limitless_query_before_work` tool against an owner-selected catalog without
+deriving an Omarchy profile or merging catalogs automatically.
 
 ## Optional command-line control
 
-The CLI remains available for development, automation, diagnostics, and MCP
-clients; it is not a prerequisite for the panel. The panel owns ordinary
-runtime and default-agent connection setup. Install the CLI directly only when
-you want lower-level control. Its pinned public Limitless Library dependency is
-fetched automatically:
+The UI is the normal path. For diagnostics, automation, or direct MCP setup:
 
-    python3 -m pip install .
+```bash
+python3 -m pip install .
 
-For offline development against a local Limitless Library checkout, install
-that checkout first and then install this project with no dependency resolution:
+limitless-omarchy status
+limitless-omarchy query --catalog ./catalog \
+  < /path/to/ephemeral-local-query-input.json
+limitless-omarchy mcp --catalog ./catalog
+limitless-omarchy provider --catalog /absolute/path/to/general-catalog
+limitless-omarchy validate-plugin .
+```
 
-    python3 -m pip install /path/to/limitlesslibrary
-    python3 -m pip install --no-deps -e .
+Managed queries and contribution operations also accept bounded JSON on stdin.
+Run `limitless-omarchy --help` for the advanced review, installation,
+enablement, publication, withdrawal, and alternate-profile controls. Paths,
+objectives, and policy acceptance are kept out of process arguments wherever
+they could reveal user work.
 
-## Companion CLI
+For offline development against a local Limitless Library checkout:
 
-Inspect the minimal local receiver profile:
-
-    limitless-omarchy status
-
-Query a local Library catalog before a customization:
-
-    limitless-omarchy query --catalog ./examples/catalog
-
-Validate this plugin using Omarchy's own validator:
-
-    limitless-omarchy validate-plugin .
-
-Enable and verify the release-pinned official service without sending a task:
-
-    limitless-omarchy service-activate
-    limitless-omarchy service-inspect
-
-For a lower-level managed query, provide one
-`limitless.omarchy-service-query-input/0.1` JSON line on stdin. Keeping the
-objective on stdin prevents it from appearing in the process list:
-
-    limitless-omarchy service-query \
-      < /path/to/ephemeral-query-input.json
-
-The panel's publish, status, and withdrawal actions use the same lower-level
-`service-publication` command with one bounded
-`limitless.omarchy-publication-input/0.1` JSON line on stdin. Paths and policy
-acceptance therefore remain out of the process list. Direct CLI use is optional:
-
-    limitless-omarchy service-publication \
-      < /path/to/ephemeral-publication-input.json
-
-Exact-artifact staging is likewise available as the optional
-`service-artifact-stage` command. It accepts only one bounded
-`limitless.omarchy-artifact-stage-input/0.1` JSON line on stdin; the ordinary
-panel supplies the owner-only continuation path itself. The explicit receiver
-adapter is available through `service-artifact-review`, using one bounded
-`limitless.omarchy-artifact-review-input/0.1` JSON line. It performs staging,
-exact-bundle materialization, inventory verification, and Omarchy-native
-validation. `service-artifact-install` accepts a bounded
-`limitless.omarchy-artifact-install-input/0.1` line and installs only that
-reviewed handoff while proving it remains disabled. `service-artifact-enable`
-accepts a bounded `limitless.omarchy-artifact-enable-input/0.1` line naming the
-signed installation state; it enables only the reverified tree and emits
-observed-invocation evidence. These commands are optional lower-level controls;
-the panel owns the normal flow.
-
-`--profile /absolute/path/to/owner-reviewed-profile.json` remains available on
-inspection and query commands as advanced lower-level control for another
-compatible service. It is not part of ordinary panel setup.
-
-The local-catalog query returns a structured local-only result. An unavailable
-catalog, missing core library, ambiguous candidate, or compatibility mismatch
-produces an abstention rather than a best-effort selection. The service query
-returns only a verified managed result or an explicit local-still-available
-fallback.
-
-The Omarchy-specific query surface is intentionally bounded to the
-`omarchy-customization` task kind, private scope, and `adopt` or `instantiate`
-use. It is not a general task-search client or a path for publishing a desktop
-request.
-
-## Preserve newly completed work locally
-
-After an owner has reviewed a freshly completed customization, seal its
-owner-provided Capsule draft without publishing it:
-
-    limitless-omarchy seal-capsule \
-      --draft ./my-capsule/capsule.draft.json \
-      --output ./private-catalog/my-capsule/capsule.json
-
-The output is digest-bound and refuses to overwrite an existing record. It
-stays local until the owner deliberately places it in a different catalog or
-sharing scope. For exact components, pass --root with the directory containing
-the declared source files; methods default to the draft's directory.
-
-## Agent connection and lower-level MCP control
-
-For normal Omarchy use, select **Install local runtime** from the panel.
-Limitless then targets the agent currently selected in Omarchy's **Setup ›
-Defaults › Agent** setting, without asking the user to find or edit its MCP
-configuration. Additional agents remain optional panel selections. Each result
-is saved in a local connection report; partial success remains useful.
-
-The companion commands are available for diagnostics or automation. They are
-not required for panel use:
-
-    limitless-omarchy agent-status \
-      --state-dir /absolute/path/to/limitless-omarchy/agent-connection
-
-    limitless-omarchy agent-reconcile \
-      --state-dir /absolute/path/to/limitless-omarchy/agent-connection \
-      --runtime-cli /absolute/path/to/limitless-omarchy \
-      --catalog /absolute/path/to/local-catalog \
-      --additional-agent claude
-
-The state directory holds no prompt, catalog contents, or service credential.
-It records only the plugin-owned MCP descriptor and its latest local report.
-
-For an explicitly configured lower-level Omarchy-aware MCP server:
-
-Start the Omarchy-aware MCP server:
-
-    limitless-omarchy mcp --catalog ./examples/catalog
-
-It exposes one read-only tool, omarchy_query_before_customization. The tool
-derives the minimal local receiver profile itself, so the agent does not need
-to inspect or send arbitrary Omarchy configuration. This initial release fixes
-the task kind and scope to Omarchy customization and private reuse; its only
-other optional input is an explicitly known Omarchy release.
-
-Use this as the agent's first material-customization step. It returns a
-component, a source-free method, or an abstention; it never transports
-artifact bytes or silently enables a desktop change.
-
-## Optionally serve general Limitless reuse
-
-The Omarchy tool above stays deliberately narrow. If the owner wants this one
-installation to also be their **general local Limitless provider**, configure
-the explicitly separate `provider` command:
-
-    limitless-omarchy provider --catalog /absolute/path/to/general-catalog
-
-It exposes the standard read-only `limitless_query_before_work` MCP tool from
-Limitless Library. That tool accepts the generic Library query contract and
-can serve ordinary agent reuse from the catalog the owner selected. It does
-not derive or disclose an Omarchy profile, read desktop configuration, connect
-to a service, or merge catalogs automatically.
-
-The distinction is intentional: `limitless-omarchy mcp` remains the private,
-Omarchy-aware first step for desktop customization, while `provider` is an
-owner's explicit choice to expose general local reuse through the same
-installed package. Either can be configured with an MCP client; run only the
-one or ones the owner intends to offer.
-
-## Install from the command line (optional)
-
-The UI path above is preferred. If you want to manage the plugin through the
-shell, add it through Omarchy's normal reviewable Git flow:
-
-    omarchy plugin add https://github.com/univeracity/limitless-omarchy.git
-    omarchy plugin enable univeracity.limitless-library
-
-The panel can then be summoned with:
-
-    omarchy-shell shell summon univeracity.limitless-library '{}'
-
-To prefill a catalog path in the panel, supply it in the summon payload:
-
-    omarchy-shell shell summon univeracity.limitless-library \
-      '{"catalogPath":"/absolute/path/to/catalog"}'
-
-Read the repository before enabling it. Omarchy shell plugins are unsandboxed
-code in a long-lived desktop process. A valid manifest, matching digest, or
-local adoption result is not a claim that arbitrary code is safe.
-
-The Quattro contract supported by this repository is documented in
-[Compatibility](docs/COMPATIBILITY.md).
-
-For a real-session validation path, use the non-mutating
-[runtime smoke test](docs/RUNTIME-SMOKE.md).
+```bash
+python3 -m pip install /path/to/limitlesslibrary
+python3 -m pip install --no-deps -e .
+```
 
 ## Remove it
 
-Use **Setup › Plugins › Remove** or Omarchy's native command:
+Use **Setup › Plugins › Remove** or:
 
-    omarchy plugin remove univeracity.limitless-library
+```bash
+omarchy plugin remove univeracity.limitless-library
+```
 
 Omarchy disables the plugin before removing its reviewed Git checkout. The
-panel-owned runtime and local state are owner data, so plugin removal does not
-silently delete them. After confirming the exact configured XDG data path, an
-owner who wants a complete cleanup can remove its `limitless-omarchy`
-directory separately.
+runtime and catalog are owner data, so removal does not silently delete them.
+An owner who wants a complete cleanup can inspect and remove the exact
+`XDG_DATA_HOME/limitless-omarchy` and `XDG_CONFIG_HOME/limitless-omarchy`
+directories afterward.
+
+## Trust and security boundary
+
+- Omarchy shell plugins run unsandboxed; review the repository before enabling
+  it.
+- Plugin installation does not run a custom install hook.
+- Runtime setup is an explicit UI action and does not cross an elevated
+  privilege boundary, create a system service, or mutate the system Python.
+- Local query derives a minimal receiver profile and does not crawl arbitrary
+  desktop configuration, prompts, screenshots, command history, or workspaces.
+- Exact bytes are installed without overwrite and enabled only after separate
+  receiver-owned verification.
+- Service discovery and publication require release-pinned trust material and
+  fail safely when it is absent or invalid.
+
+Please report security issues through [SECURITY.md](SECURITY.md), not a public
+issue.
 
 ## Marketplace verification
 
-The repository carries the root manifest, README, Apache-2.0 license,
-installation and removal directions, explicit dependencies, native validator
-gate, and static-baseline preflight required for an omarchyplugins.com
-submission. The current marketplace baseline finds no blocking pattern. It
-requests maintainer review for one disclosed capability: the explicit
-**Install local runtime** action uses Python's package installer only inside
-`XDG_DATA_HOME/limitless-omarchy/runtime`.
+The repository includes the root manifest, README, Apache-2.0 license, owned
+preview, safe removal instructions, native Omarchy validation, and current
+marketplace static-baseline preflight.
 
-That action is not an install hook, does not run while Omarchy clones or
-validates the plugin, does not request elevated access, and does not modify the
-system Python. It installs this reviewed checkout plus the public Limitless
-Library dependency pinned to a full Git commit. See the paste-ready
-[marketplace submission notes](docs/MARKETPLACE-SUBMISSION.md) for the exact
-review boundary and cutover sequence.
+The current baseline reports no findings and one disclosed review capability:
+`package-manager`. That capability exists because the explicit **Install local
+runtime** action invokes Python's package installer inside the panel-owned
+virtual environment. It is not an Omarchy install hook, does not request
+elevated access, and does not alter the system Python.
 
-## Repository boundary
+See [marketplace submission notes](docs/MARKETPLACE-SUBMISSION.md) for the exact
+review boundary and [runtime smoke testing](docs/RUNTIME-SMOKE.md) for the
+real-session validation path.
 
-| Repository | Responsibility |
+## Develop and verify
+
+```bash
+python3 -m pip install -e '.[dev]'
+pytest
+ruff check src tests .github/scripts
+ruff format --check src tests .github/scripts
+bandit -r -q src
+omarchy plugin validate .
+```
+
+The public Limitless Library dependency is pinned to a full Git commit. CI also
+pins the Omarchy validator and marketplace baseline so a moving upstream cannot
+silently redefine a passing release.
+
+## Project boundary
+
+| Layer | Responsibility |
 | --- | --- |
-| Limitless Library | Generic local reuse core, capsule contracts, MCP and CLI surfaces, receipts, and conformance |
-| This repository | Omarchy profile, Quattro panel, native validation integration, opt-in managed-service client, explicit generic-provider handoff, examples, and tests |
-| Private Limitless service | Identity, policy, scopes, private catalog coordination, revocation, and managed verification |
+| [Limitless Library](https://github.com/Univeracity/limitlesslibrary) | Generic local reuse, Work Capsule contracts, MCP/CLI surfaces, receipts, and conformance. |
+| **Limitless Library for Omarchy** | Quattro UI, Omarchy receiver profile, local catalog, agent setup, native verification, and optional service client. |
+| Limitless Library service | Fast public/shared discovery, identity, policy, scopes, revocation, coordination, and managed verification. |
 
-## Status
-
-Pre-release local-first implementation with one-action, release-pinned
-official-service activation, reviewed exact-component adoption, explicit
-public contribution, and an advanced alternate-profile connector. No live
-official identity is invented by this source tree. Every capture, publication,
-installation, enablement, and withdrawal action remains explicit.
+Limitless Library for Omarchy is an [Apache-2.0](LICENSE) Univeracity project.
