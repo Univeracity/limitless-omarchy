@@ -198,6 +198,9 @@ def test_bar_widget_opens_the_panel_through_omarchy() -> None:
     assert "iconComponent: segmentedMark" in widget
     assert 'text: "<"' not in widget
     assert widget.count("row:") == 5
+    assert "modelData.column * parent.blockSize" in widget
+    assert "modelData.row * parent.blockSize" in widget
+    assert "width * 0." not in widget
     assert "Color.accent" in widget
     assert "omarchy-shell shell toggle univeracity.limitless-library" in widget
 

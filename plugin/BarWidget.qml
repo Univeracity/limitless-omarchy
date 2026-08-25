@@ -15,24 +15,29 @@ BarWidget {
     id: segmentedMark
 
     Item {
-      readonly property real blockSize: Math.max(2, Math.floor(width / 5))
-      readonly property real rowStep: (height - blockSize) / 4
-      readonly property real tipX: Math.round(width * 0.06)
-      readonly property real innerX: Math.round(width * 0.25)
-      readonly property real outerX: Math.round(width * 0.63)
+      // Match the panel mark's directly staggered block rhythm: each row
+      // advances by exactly one block, with no disconnected middle gap.
+      readonly property real blockSize: Math.max(
+        2,
+        Math.floor(Math.min(width / 3, height / 5))
+      )
+      readonly property real markWidth: blockSize * 3
+      readonly property real markHeight: blockSize * 5
+      readonly property real originX: Math.round((width - markWidth) / 2)
+      readonly property real originY: Math.round((height - markHeight) / 2)
 
       Repeater {
         model: [
-          { x: parent.outerX, row: 0, tone: 1.30 },
-          { x: parent.innerX, row: 1, tone: 1.16 },
-          { x: parent.tipX, row: 2, tone: 1.00 },
-          { x: parent.innerX, row: 3, tone: 1.16 },
-          { x: parent.outerX, row: 4, tone: 1.30 }
+          { column: 2, row: 0, tone: 1.30 },
+          { column: 1, row: 1, tone: 1.16 },
+          { column: 0, row: 2, tone: 1.00 },
+          { column: 1, row: 3, tone: 1.16 },
+          { column: 2, row: 4, tone: 1.30 }
         ]
 
         Rectangle {
-          x: modelData.x
-          y: Math.round(modelData.row * parent.rowStep)
+          x: parent.originX + modelData.column * parent.blockSize
+          y: parent.originY + modelData.row * parent.blockSize
           width: parent.blockSize
           height: parent.blockSize
           color: modelData.tone === 1.00
