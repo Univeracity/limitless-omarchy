@@ -19,7 +19,7 @@
       "name": "limitless-omarchy",
       "version": "0.1.1",
       "path": "runtime/wheels/limitless_omarchy-0.1.1-py3-none-any.whl",
-      "sha256": "d622811e43d6d3375d9dfdc15a46bfc354b7587bdb12c6518fce7bb43f2a72f9",
+      "sha256": "2f53d5181febfccac9cdbf579124f88e848575a778e54a12bcf4ebb103193b29",
       "source": {
         "repository": "https://github.com/Univeracity/limitless-omarchy",
         "release": "0.1.1"
