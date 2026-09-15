@@ -13,6 +13,9 @@ Confirm all of the following manually:
 1. The panel opens from the bar without a Quickshell error.
 2. Setup does not request elevated access or alter the system Python.
 3. The runtime-owned catalog returns an eligible component or source-free method, or a justified abstention.
+   For a method, read its steps and verification in the panel. A new query or
+   closing the panel must clear the previous method. Tab must reach the objective
+   field, and the panel must fit the screen with its longer content scrollable.
 4. No catalog path is requested or displayed in the panel.
 5. If Omarchy has a supported default agent, setup reports its local MCP
    connection without replacing unrelated configured servers.

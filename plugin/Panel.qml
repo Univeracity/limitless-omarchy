@@ -91,6 +91,10 @@ Item {
   property string detail: "Create an isolated local runtime to begin. Nothing will be shared."
   property string disposition: "status"
   property string selectionReference: ""
+  property var methodSteps: []
+  property var methodChecks: []
+  property var methodConstraints: []
+  property var methodLimitations: []
   property string errorText: ""
   property string commandOutput: ""
   property string commandError: ""
@@ -101,6 +105,7 @@ Item {
   readonly property bool commandRunning: command.running
 
   function open(payloadJson) {
+    showMethod(null)
     var payload = {}
     try { payload = JSON.parse(payloadJson || "{}") || {} } catch (e) {}
     if (payload.omarchyRelease !== undefined) omarchyRelease = String(payload.omarchyRelease)
@@ -142,6 +147,7 @@ Item {
     opened = false
     serviceObjective = ""
     pendingInput = ""
+    showMethod(null)
     if (command.running) command.running = false
   }
 
@@ -153,6 +159,19 @@ Item {
 
   function refresh() {
     runRuntime("panel-state", [])
+  }
+
+  function showMethod(method) {
+    var value = method || {}
+    methodSteps = Array.isArray(value.steps) ? value.steps.map(function(step) {
+      if (typeof step === "string") return step
+      return String(step.instruction || "")
+        + (step.expected ? "\nExpected: " + String(step.expected) : "")
+    }) : []
+    methodChecks = Array.isArray(value.verification) ? value.verification
+      : Array.isArray(value.evaluation) ? value.evaluation : []
+    methodConstraints = Array.isArray(value.constraints) ? value.constraints : []
+    methodLimitations = Array.isArray(value.limitations) ? value.limitations : []
   }
 
   function installRuntime() {
@@ -392,6 +411,7 @@ Item {
 
   function runRuntime(nextOperation, arguments, stdinPayload) {
     if (command.running) return
+    if (nextOperation === "query" || nextOperation === "service-query") showMethod(null)
     errorText = ""
     commandOutput = ""
     commandError = ""
@@ -612,6 +632,7 @@ Item {
           + " Stage its exact bytes for review before choosing a receiver-native installation."
       } else if (disposition === "source-free-method") {
         var serviceMethod = serviceSelection && serviceSelection.method ? serviceSelection.method : {}
+        showMethod(serviceMethod)
         headline = "Verified method available"
         detail = String(serviceMethod.summary || serviceSelection.summary || "Apply the source-free method locally.")
       } else {
@@ -710,6 +731,7 @@ Item {
         + " available. Review the source and use Omarchy's native install and validation flow."
     } else if (disposition === "source-free-method") {
       var method = selected && selected.offer ? selected.offer.method : null
+      showMethod(method)
       headline = "Source-free method available"
       detail = method && method.summary
         ? String(method.summary)
@@ -767,9 +789,10 @@ Item {
   Component.onCompleted: Qt.callLater(function() { root.refresh() })
 
   PanelWindow {
+    id: panelWindow
     visible: root.opened
     implicitWidth: content.implicitWidth
-    implicitHeight: content.implicitHeight
+    implicitHeight: Math.min(content.implicitHeight, screen ? screen.height - 64 : content.implicitHeight)
     anchors { top: true; right: true }
     margins { top: 44; right: 20 }
     color: Color.popups.background

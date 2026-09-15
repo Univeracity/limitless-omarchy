@@ -476,6 +476,42 @@ Item {
 
       // Local Library -------------------------------------------------------
       Column {
+        visible: root.panel && root.panel.methodSteps.length > 0
+          && (root.panel.activeSection === "library" || root.panel.activeSection === "service")
+        width: parent.width
+        spacing: 10
+
+        PanelSectionHeader {
+          width: parent.width
+          text: "SELECTED METHOD"
+          foreground: Color.popups.text
+          fontFamily: Style.font.family
+        }
+
+        Repeater {
+          model: root.panel ? [
+            { label: "Steps", items: root.panel.methodSteps },
+            { label: "Verify", items: root.panel.methodChecks },
+            { label: "Constraints", items: root.panel.methodConstraints },
+            { label: "Limitations", items: root.panel.methodLimitations }
+          ] : []
+          delegate: Text {
+            required property var modelData
+            visible: modelData.items.length > 0
+            width: parent.width
+            wrapMode: Text.Wrap
+            textFormat: Text.PlainText
+            text: modelData.label + "\n" + modelData.items.map(function(item, index) {
+              return String(index + 1) + ". " + String(item)
+            }).join("\n")
+            color: Color.popups.text
+            font.family: Style.font.family
+            font.pixelSize: Style.font.bodySmall
+          }
+        }
+      }
+
+      Column {
         visible: root.panel && root.panel.activeSection === "library"
         width: parent.width
         spacing: 12
@@ -516,6 +552,7 @@ Item {
 
           TextInput {
             id: libraryObjectiveInput
+            activeFocusOnTab: true
             anchors.fill: parent
             anchors.leftMargin: 10
             anchors.rightMargin: 10

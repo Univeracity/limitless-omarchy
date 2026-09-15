@@ -920,6 +920,23 @@ def test_bundled_catalog_is_sealed_and_queryable() -> None:
     assert result["decision"]["selected"]["capsule"]["id"] == "capsule:omarchy.reading-focus-method"
 
 
+def test_bundled_reading_method_does_not_answer_an_unmatched_objective() -> None:
+    catalog = Path(__file__).parents[1] / "catalog"
+    match = query_local_catalog(
+        catalog,
+        objective="Create a distraction-free reading layout with a restore path",
+        runner=shell_available,
+    )
+    mismatch = query_local_catalog(
+        catalog,
+        objective="Replace a Windows printer driver with a macOS kernel extension",
+        runner=shell_available,
+    )
+    assert match["disposition"] == "source-free-method"
+    assert mismatch["disposition"] == "abstain"
+    assert mismatch["decision"]["selected"] is None
+
+
 def test_query_fails_closed_for_unavailable_catalog(tmp_path: Path) -> None:
     result = query_local_catalog(tmp_path / "missing", runner=shell_available)
 
