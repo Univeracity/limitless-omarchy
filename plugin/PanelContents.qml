@@ -1355,7 +1355,7 @@ Item {
           }
 
           StatTile {
-            label: "Useful returns"
+            label: "Selections returned"
             value: root.panel
               ? String(root.panel.statsExactComponents + root.panel.statsSourceFreeMethods)
               : "0"
@@ -1521,11 +1521,11 @@ Item {
           text: {
             if (!root.panel || !root.panel.statsAvailable)
               return "The scorekeeper misplaced its pencil. Other Limitless operations still work."
-            var useful = root.panel.statsExactComponents + root.panel.statsSourceFreeMethods
+            var selections = root.panel.statsExactComponents + root.panel.statsSourceFreeMethods
             if (root.panel.statsAdoptions > 0)
               return "A wheel was left peacefully un-reinvented."
-            if (useful > 0)
-              return "Looks like reuse showed up to work. Nice."
+            if (selections > 0)
+              return "Work found. Receiver checks decide whether it helps."
             if (root.panel.statsAbstentions > 0)
               return "Fresh starts: justified, not improvised."
             return "The counters are stretching. Give them a query."

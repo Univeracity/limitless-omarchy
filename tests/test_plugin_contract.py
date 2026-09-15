@@ -145,7 +145,7 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "ScrollBar.vertical" in contents
     assert "included example" not in (panel + contents).lower()
     assert "See what Limitless has been doing in the background." in contents
-    assert "Looks like reuse showed up to work. Nice." in contents
+    assert "Work found. Receiver checks decide whether it helps." in contents
     assert 'text: statTile.loading ? "◒" : statTile.value' in contents
     assert "running: statTile.loading" in contents
     assert "onRunningChanged: if (!running) statValue.rotation = 0" in contents
