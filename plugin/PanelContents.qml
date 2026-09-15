@@ -496,7 +496,9 @@ Item {
                 : root.panel.serviceReady
                   ? "Local reuse and service discovery are available."
                   : "Local reuse is available. Opt in for service discovery.")
-            : "Install a private, per-user runtime. Nothing is installed globally or shared."
+            : root.panel && root.panel.runtimeUpdateRequired
+              ? "Update the private runtime to match this plugin. Your settings and local methods are kept."
+              : "Install a private, per-user runtime. Nothing is installed globally or shared."
           color: Color.popups.text
           opacity: 0.72
           font.family: Style.font.family
@@ -543,7 +545,7 @@ Item {
           visible: root.panel && !root.panel.runtimeReady
           width: parent.width
           height: root.controlHeight
-          text: "Install local runtime"
+          text: root.panel && root.panel.runtimeUpdateRequired ? "Update local runtime" : "Install local runtime"
           bordered: true
           focusable: true
           enabled: !root.commandRunning

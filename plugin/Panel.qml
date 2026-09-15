@@ -86,6 +86,7 @@ Item {
   property int statsAgentsAttention: 0
   property bool statsServiceConnected: false
   property bool runtimeReady: false
+  property bool runtimeUpdateRequired: false
   property string headline: "Set up Limitless Library"
   property string detail: "Create an isolated local runtime to begin. Nothing will be shared."
   property string disposition: "status"
@@ -476,10 +477,14 @@ Item {
     if (value.schemaVersion === "limitless.omarchy-status/0.1") {
       disposition = "status"
       runtimeReady = String(value.mode || "") === "local-only"
-      headline = runtimeReady ? "Local Library ready" : "Set up Limitless Library"
+      runtimeUpdateRequired = value.service && value.service.reason === "local-runtime-update-required"
+      headline = runtimeReady ? "Local Library ready"
+        : runtimeUpdateRequired ? "Update Limitless Library" : "Set up Limitless Library"
       detail = runtimeReady
         ? "Check approved local work below, or open the service for public and shared reuse."
-        : "Create an isolated local runtime to begin. Nothing will be shared."
+        : runtimeUpdateRequired
+          ? "This plugin includes a newer runtime. Update it to use the current fixes; your settings and local methods are kept."
+          : "Create an isolated local runtime to begin. Nothing will be shared."
       selectionReference = ""
       return
     }
@@ -512,6 +517,7 @@ Item {
     }
     if (value.schemaVersion === "limitless.omarchy-agent-connection-report/0.1") {
       runtimeReady = true
+      runtimeUpdateRequired = false
       defaultAgent = value.defaultAgent === null || value.defaultAgent === undefined ? "" : String(value.defaultAgent)
       additionalAgentIds = Array.isArray(value.additionalAgents) ? value.additionalAgents.map(String) : []
       agentReportPath = String(value.reportPath || "")

@@ -15,7 +15,7 @@ ed7bae4ac5a570e9df307486e0202fdafcc6ee24. Update that pin only after
 checking changes to the plugin manifest, lifecycle, and validator behavior.
 
 The reviewed runtime bundle ties the public Limitless Library core wheel to
-commit bbd8d312151e01503c85bce40ebbb3fa22aee66d and an exact SHA-256 digest.
+commit ad52fb4b6ea3644ba44428bc58f3cac410b69cdc and an exact SHA-256 digest.
 Update it only after reproducible wheel builds and this adapter's full test,
 package, distribution, and bundle-verification checks pass.
 

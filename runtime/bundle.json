@@ -9,10 +9,10 @@
       "name": "limitless-library",
       "version": "0.1.0a0",
       "path": "runtime/wheels/limitless_library-0.1.0a0-py3-none-any.whl",
-      "sha256": "f3999c19bcc5663a53a0b82f928bedf725d1cf42be64c1e917c385c57499c639",
+      "sha256": "c9e67aaeecbc987c1f5d021badbabe62f4226355e06bcb167d2ab2bf799da48f",
       "source": {
         "repository": "https://github.com/Univeracity/limitlesslibrary",
-        "commit": "45ccf29da6c16ca60aa425b7cead463b5e8bed6a"
+        "commit": "ad52fb4b6ea3644ba44428bc58f3cac410b69cdc"
       }
     },
     {

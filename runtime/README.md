@@ -7,6 +7,16 @@ installs the two reviewed local wheels without dependency resolution or index
 access. Dependencies are reinstalled from hash-approved bytes during setup so
 an older mutable runtime cannot be grandfathered into the reviewed release.
 
+Successful setup stores an owner-only `installed-bundle.json` beneath the XDG
+runtime root after both wheel installation and seed-catalog synchronization.
+The launcher compares that receipt with the plugin's current bundle before
+running an installed runtime. An older or unrecorded installation reports
+`local-runtime-update-required`; the panel offers **Update local runtime**.
+Updates keep owner settings and `local-*` catalog entries. A failed reinstall
+removes the success receipt so the launcher cannot report the runtime current.
+This receipt identifies the installed bundle; it is not a continuous integrity
+scan of every runtime file.
+
 `bundle.json` binds the lock and wheels to exact SHA-256 digests. The core
 wheel is built from the public Limitless Library commit named in that manifest.
 The plugin wheel is also checked byte-for-byte against the Python sources in

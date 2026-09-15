@@ -96,6 +96,11 @@ terminal command, prompt duplication, repository path, or receiver profile is
 required from the user. Codex, Claude Code, Grok, and Antigravity CLI have
 verified setup adapters; unsupported clients remain untouched.
 
+After a plugin update, the panel offers **Update local runtime** when the
+installed runtime no longer matches the bundled version. That action keeps
+your settings and locally registered methods while installing the reviewed
+runtime fixes.
+
 The Library tab always begins locally:
 
 > Local reuse is available. Opt in for service discovery.
