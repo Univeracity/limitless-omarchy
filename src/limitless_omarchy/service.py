@@ -166,38 +166,31 @@ def inspect_managed_service(
 ) -> dict[str, Any]:
     """Verify one explicitly supplied profile without sending a task query."""
 
-    if profile_path is None and connector_factory is ServiceConnector:
-        try:
-            connector = activated_service_connector()
-        except OfficialServiceNotConfiguredError:
-            return {
-                "schemaVersion": "limitless.omarchy-service-status/0.1",
-                "mode": "service-not-enabled",
-                "reason": "service-not-enabled",
-            }
-        except (
-            OfficialServiceActivationError,
-            ServiceIdentityError,
-            OSError,
-            ValueError,
-        ) as error:
-            raise AdapterError("service profile or credential is invalid") from error
-    else:
-        connector = _service_connector(
-            profile_path,
-            access_token=None,
-            connector_factory=connector_factory,
-        )
+    connector = None
     try:
+        if profile_path is None and connector_factory is ServiceConnector:
+            connector = activated_service_connector()
+        else:
+            connector = _service_connector(
+                profile_path,
+                access_token=None,
+                connector_factory=connector_factory,
+            )
         return _service_status(connector, connector.inspect())
+    except OfficialServiceNotConfiguredError:
+        return {
+            "schemaVersion": "limitless.omarchy-service-status/0.1",
+            "mode": "service-not-enabled",
+            "reason": "service-not-enabled",
+        }
     except ServiceUnavailableError:
         return {
             "schemaVersion": "limitless.omarchy-service-status/0.1",
             "mode": "service-unavailable",
-            "service": connector.profile.public_summary(),
+            "service": None if connector is None else connector.profile.public_summary(),
             "reason": "service-unavailable-local-still-available",
         }
-    except ServiceConnectorError as error:
+    except (OfficialServiceActivationError, ServiceConnectorError, OSError, ValueError) as error:
         raise AdapterError("service profile or authority verification failed") from error
 
 
@@ -459,9 +452,9 @@ def _load_handoff_state(
 
 def _managed_result(
     *,
-    connector: ServiceConnector,
+    connector: ServiceConnector | None,
     local_profile: dict[str, Any],
-    query: dict[str, Any],
+    query: dict[str, Any] | None,
     decision: dict[str, Any] | None,
     handoff_state_path: Path | None = None,
     unavailable: bool = False,
@@ -487,8 +480,8 @@ def _managed_result(
         "disposition": disposition,
         "reason": reason,
         "profile": local_profile,
-        "service": connector.profile.public_summary(),
-        "requestDigest": query["queryDigest"],
+        "service": None if connector is None else connector.profile.public_summary(),
+        "requestDigest": None if query is None else query["queryDigest"],
         "selection": _project_service_selection(decision),
         "handoffStatePath": None if handoff_state_path is None else str(handoff_state_path),
     }
@@ -509,16 +502,18 @@ def query_managed_service(
 ) -> dict[str, Any]:
     """Issue one owner-authorized query and return only verified service data."""
 
-    connector = _service_connector(
-        profile_path,
-        access_token=access_token,
-        connector_factory=connector_factory,
-    )
+    connector = None
+    query = None
     local_profile = discover_profile(
         omarchy_release=omarchy_release,
         runner=runner,
     )
     try:
+        connector = _service_connector(
+            profile_path,
+            access_token=access_token,
+            connector_factory=connector_factory,
+        )
         query = connector.build_query(
             request_id=request_id or f"request:omarchy-{secrets.token_hex(16)}",
             objective=objective,
