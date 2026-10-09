@@ -10,12 +10,15 @@ This initial adapter targets Omarchy's Quattro plugin contract:
 - native validation through the Omarchy plugin validation command; and
 - native reload or discovery through the Omarchy shell rescan command.
 
-The contract is pinned in CI to Omarchy commit
-ed7bae4ac5a570e9df307486e0202fdafcc6ee24. Update that pin only after
-checking changes to the plugin manifest, lifecycle, and validator behavior.
+The contract is pinned in CI to Omarchy Quattro commit
+c352b62d67456f56ca898d0e23effc1b20c25ca6. The live shell at this
+revision passes a public manifest to third-party plugins without its private
+`__sourceDir` field. The panel resolves its own QML directory to find its
+runtime, and the native validator has been rerun against this revision. Update
+the pin only after checking the manifest, lifecycle, and validator behavior.
 
 The reviewed runtime bundle ties the public Limitless Library core wheel to
-commit 129761af2df1b802d05c9e6dcc52d2e708253ffd and an exact SHA-256 digest.
+commit 9db4b7efda37630530ff62f8aac62fbb11d10e19 and an exact SHA-256 digest.
 Update it only after reproducible wheel builds and this adapter's full test,
 package, distribution, and bundle-verification checks pass.
 

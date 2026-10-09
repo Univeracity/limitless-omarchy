@@ -14,6 +14,7 @@ Item {
   readonly property bool commandRunning: panel ? panel.commandRunning : false
   readonly property int bodyWidth: 440
   readonly property int controlHeight: Math.max(34, Style.spacing.controlHeight)
+  property bool pendingScrollReset: false
 
   function heroMeta(fallback) {
     if (!root.commandRunning || !root.panel || root.panel.operation === "stats") return fallback
@@ -21,8 +22,36 @@ Item {
   }
 
   function scrollToTop() {
-    panelFlick.contentY = panelFlick.originY
-    Qt.callLater(function() { panelFlick.contentY = panelFlick.originY })
+    pendingScrollReset = true
+    panelFlick.contentY = 0
+    Qt.callLater(function() { panelFlick.contentY = 0 })
+    scrollResetTimer.restart()
+  }
+
+  function methodStatusLabel(status) {
+    var labels = {
+      "local": "Private on this device",
+      "waiting-account": "Waiting for a shared space",
+      "queued": "Queued to share",
+      "retryable": "Waiting to retry",
+      "submitted": "Awaiting service review",
+      "published": "Published",
+      "policy-attention": "Review sharing policy",
+      "attention": "Needs attention",
+      "withdrawal-queued": "Withdrawal queued",
+      "withdrawn": "Withdrawn",
+      "superseded": "Earlier revision",
+      "disabled": "Sharing off"
+    }
+    return labels[String(status || "")] || "Check sharing status"
+  }
+
+  function methodDestinationLabel(destination) {
+    var labels = {
+      "off": "off", "local": "local", "circle": "team",
+      "organization": "organization", "public": "public"
+    }
+    return labels[String(destination || "")] || "local"
   }
 
   implicitWidth: 480
@@ -31,6 +60,17 @@ Item {
   Connections {
     target: root.panel
     function onActiveSectionChanged() { root.scrollToTop() }
+    function onOpenedChanged() { if (root.panel && root.panel.opened) root.scrollToTop() }
+    function onSettingsModalOpenChanged() { root.scrollToTop() }
+  }
+
+  Timer {
+    id: scrollResetTimer
+    interval: 120
+    onTriggered: {
+      panelFlick.contentY = 0
+      root.pendingScrollReset = false
+    }
   }
 
   Component {
@@ -231,6 +271,8 @@ Item {
     flickableDirection: Flickable.VerticalFlick
     boundsBehavior: Flickable.StopAtBounds
     interactive: contentHeight > height
+    onContentHeightChanged: if (contentHeight <= height || root.pendingScrollReset) contentY = 0
+    onHeightChanged: if (contentHeight <= height) contentY = 0
     ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
     Column {
@@ -518,7 +560,9 @@ Item {
 
         PanelSectionHeader {
           width: parent.width
-          text: root.panel && root.panel.runtimeReady ? "LOCAL REUSE" : "PRIVATE SETUP"
+          text: root.panel && root.panel.runtimeReady
+            ? (root.panel.settingsModalOpen ? "METHOD SHARING" : "FIND A BETTER STARTING POINT")
+            : "PRIVATE SETUP"
           foreground: Color.popups.text
           fontFamily: Style.font.family
         }
@@ -527,10 +571,12 @@ Item {
           width: parent.width
           wrapMode: Text.Wrap
           text: root.panel && root.panel.runtimeReady
-            ? (!root.panel.serviceStatusKnown
+            ? (root.panel.settingsModalOpen
+                ? "Choose when your agent saves useful methods and where they may go."
+                : !root.panel.serviceStatusKnown
                 ? "Local reuse is available. Checking service discovery."
                 : root.panel.serviceReady
-                  ? "Local reuse and service discovery are available."
+                  ? "Limitless finds reusable work for your task. Check this device or the public Library."
                   : "Local reuse is available. Opt in for service discovery.")
             : root.panel && root.panel.runtimeUpdateRequired
               ? "Update the private runtime to match this plugin. Your settings and local methods are kept."
@@ -590,14 +636,15 @@ Item {
         }
 
         Row {
-          visible: root.panel && root.panel.runtimeReady
+          visible: root.panel && root.panel.runtimeReady && !root.panel.settingsModalOpen
           width: parent.width
           spacing: 8
 
           Button {
             width: 216
             height: root.controlHeight
-            text: "Query local Library"
+            text: "Check this device"
+            selected: true
             bordered: true
             focusable: true
             enabled: !root.commandRunning
@@ -607,27 +654,121 @@ Item {
           Button {
             width: 216
             height: root.controlHeight
-            text: root.panel && root.panel.settingsModalOpen ? "Close settings" : "Library settings"
-            selected: root.panel && root.panel.settingsModalOpen
+            text: root.panel && !root.panel.serviceStatusKnown
+              ? "Checking public Library"
+              : root.panel && root.panel.serviceReady
+                ? (root.panel.serviceUsageExceeded ? "View public usage" : "Check public Library")
+                : "Connect public Library"
             bordered: true
             focusable: true
-            enabled: !root.commandRunning
+            enabled: root.panel && root.panel.serviceStatusKnown && !root.commandRunning
             onClicked: if (root.panel) {
-              if (root.panel.settingsModalOpen) root.panel.selectSection("library")
-              else root.panel.openSettings()
+              if (!root.panel.serviceReady || root.panel.serviceUsageExceeded) root.panel.connectServiceFromLibrary()
+              else root.panel.queryService()
             }
           }
         }
 
         Text {
-          visible: root.panel && root.panel.runtimeReady
+          visible: root.panel && root.panel.runtimeReady && !root.panel.settingsModalOpen
           width: parent.width
           wrapMode: Text.Wrap
-          text: "Local decisions stay on this machine. Desktop changes still require explicit review and enablement."
+          text: "Matches include reviewed components and source-free methods. Check that a match fits your system before using it."
           color: Color.popups.text
           opacity: 0.58
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
+        }
+
+        BorderSurface {
+          visible: root.panel && root.panel.runtimeReady && !root.panel.settingsModalOpen
+          width: parent.width
+          implicitHeight: contributionInvite.implicitHeight + 24
+          color: Color.popups.background
+          borderSpec: Border.flat(Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.46), 1)
+          radius: Style.cornerRadius
+
+          Column {
+            id: contributionInvite
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: 12
+            anchors.rightMargin: 12
+            spacing: 8
+
+            Text {
+              width: parent.width
+              text: "SAVE WHAT WORKED"
+              color: Color.accent
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              font.letterSpacing: 0.7
+            }
+
+            Text {
+              width: parent.width
+              wrapMode: Text.Wrap
+              text: "After a checked result, save the steps and checks as a method. The next person can adapt it without receiving your source."
+              color: Color.popups.text
+              font.family: Style.font.family
+              font.pixelSize: Style.font.bodySmall
+            }
+
+            Text {
+              width: parent.width
+              wrapMode: Text.Wrap
+              text: root.panel && root.panel.defaultAgentConnected
+                ? root.panel.agentLabel(root.panel.defaultAgent) + " is connected for method capture. "
+                  + String(root.panel.draftPending) + " current method"
+                  + (root.panel.draftPending === 1 ? "" : "s") + " saved here."
+                : "Connect your Omarchy agent on the Agents tab to capture useful methods after work."
+              color: Color.popups.text
+              opacity: 0.66
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+
+            Row {
+              width: parent.width
+              spacing: 8
+
+              Button {
+                width: 204
+                height: root.controlHeight
+                text: "Method sharing"
+                bordered: true
+                focusable: true
+                enabled: !root.commandRunning
+                onClicked: if (root.panel) {
+                  root.panel.openSettings()
+                  root.scrollToTop()
+                }
+              }
+
+              Button {
+                width: 204
+                height: root.controlHeight
+                text: "Complete solution guide ↗"
+                bordered: true
+                focusable: true
+                enabled: !root.commandRunning
+                onClicked: if (root.panel) root.panel.openOfficialUrl(
+                  "https://github.com/Univeracity/limitlesslibrary/blob/main/docs/MANAGED-SERVICE.md#explicit-anonymous-publication")
+              }
+            }
+
+            Text {
+              width: parent.width
+              wrapMode: Text.Wrap
+              text: "A complete source-containing solution needs its own reviewed draft and explicit publication. Method sharing does not upload source."
+              color: Color.popups.text
+              opacity: 0.58
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+          }
         }
 
         BorderSurface {
@@ -649,7 +790,7 @@ Item {
 
             Text {
               width: parent.width
-              text: "DEFAULT SHARING"
+              text: "WHERE NEW METHODS GO"
               color: Color.popups.text
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
@@ -660,7 +801,7 @@ Item {
             Text {
               width: parent.width
               wrapMode: Text.Wrap
-              text: "Choose where newly registered methods should be available. A specific repository or contribution can override this default."
+              text: "Methods stay on this device until you choose another destination. Public sharing requires the service policy; team and organization sharing wait for an account."
               color: Color.popups.text
               opacity: 0.68
               font.family: Style.font.family
@@ -695,7 +836,7 @@ Item {
 
             Text {
               width: parent.width
-              text: "CONTRIBUTION MODE"
+              text: "WHEN TO SAVE METHODS"
               color: Color.popups.text
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
@@ -709,8 +850,8 @@ Item {
 
               Repeater {
                 model: [
-                  { label: "Manual", value: "manual" },
-                  { label: "Agent-mediated", value: "agent-mediated" },
+                  { label: "Only when asked", value: "manual" },
+                  { label: "When useful", value: "agent-mediated" },
                   { label: "Automatic", value: "automatic" }
                 ]
 
@@ -729,7 +870,21 @@ Item {
 
             Text {
               width: parent.width
-              text: "REUSABLE MATERIAL"
+              wrapMode: Text.Wrap
+              text: root.panel && root.panel.pendingContributionMode === "manual"
+                ? "Your agent saves a method only when you ask."
+                : root.panel && root.panel.pendingContributionMode === "automatic"
+                  ? "Your agent saves each reusable method it creates under the destination you chose."
+                  : "Your agent saves a concise method when it is likely to help future work."
+              color: Color.popups.text
+              opacity: 0.68
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+
+            Text {
+              width: parent.width
+              text: "SOURCE REVIEW PREFERENCE"
               color: Color.popups.text
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
@@ -754,7 +909,7 @@ Item {
               Button {
                 width: (parent.width - parent.spacing) / 2
                 height: 30
-                text: "Methods + exact sources"
+                text: "Methods + exact drafts"
                 selected: root.panel && root.panel.pendingMaterialPolicy === "methods-and-exact"
                 bordered: true
                 focusable: true
@@ -763,11 +918,21 @@ Item {
             }
 
             Text {
+              width: parent.width
+              wrapMode: Text.Wrap
+              text: "This records what you may review later. The agent tool registers methods only; complete source needs a separate exact draft and explicit publication."
+              color: Color.popups.text
+              opacity: 0.68
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+
+            Text {
               visible: root.panel && root.panel.pendingDefaultDestination === "public"
               width: parent.width
               wrapMode: Text.Wrap
               text: root.panel && root.panel.pendingContributionMode === "automatic"
-                ? "Automatic + Public is a standing authorization: qualifying methods publish silently after registration. Saving binds that authorization to the verified publication policy; a policy change pauses publication for review."
+                ? "Automatic + Public is a standing authorization: qualifying methods queue for public submission after registration. Saving binds that authorization to the verified publication policy; a policy change pauses submission for review."
                 : "Saving Public binds this destination to the verified publication policy. The selected contribution mode still controls who initiates registration."
               color: Color.accent
               font.family: Style.font.family
@@ -801,7 +966,7 @@ Item {
               Button {
                 width: 208
                 height: root.controlHeight
-                text: "Save"
+                text: "Save sharing"
                 selected: true
                 bordered: true
                 focusable: true
@@ -814,28 +979,12 @@ Item {
 
         PanelSectionHeader {
           visible: root.panel && root.panel.runtimeReady && !root.panel.settingsModalOpen
+            && (root.panel.serviceArtifactReviewAvailable || root.panel.serviceArtifactInstallAvailable
+              || root.panel.serviceArtifactEnableAvailable)
           width: parent.width
-          text: "PUBLIC AND SHARED REUSE"
+          text: "REVIEW AN EXACT COMPONENT"
           foreground: Color.popups.text
           fontFamily: Style.font.family
-        }
-
-        Button {
-          visible: root.panel && root.panel.runtimeReady && !root.panel.settingsModalOpen
-          width: parent.width
-          height: root.controlHeight
-          text: root.panel && !root.panel.serviceStatusKnown
-            ? "Checking service connection"
-            : root.panel && root.panel.serviceReady
-              ? (root.panel.serviceUsageExceeded ? "View usage and upgrade options" : "Query Limitless Library service")
-              : "Connect to Limitless Library service"
-          bordered: true
-          focusable: true
-          enabled: root.panel && root.panel.serviceStatusKnown && !root.commandRunning
-          onClicked: if (root.panel) {
-            if (!root.panel.serviceReady || root.panel.serviceUsageExceeded) root.panel.connectServiceFromLibrary()
-            else root.panel.queryService()
-          }
         }
 
         Button {
@@ -872,18 +1021,6 @@ Item {
           focusable: true
           enabled: root.panel && root.panel.serviceReady && !root.commandRunning
           onClicked: if (root.panel) root.panel.enableServiceArtifact()
-        }
-
-        Text {
-          visible: root.panel && root.panel.runtimeReady && !root.panel.settingsModalOpen
-            && root.panel.serviceSummary !== "No managed-service request has been made."
-          width: parent.width
-          wrapMode: Text.WrapAnywhere
-          text: root.panel ? root.panel.serviceSummary : ""
-          color: Color.accent
-          opacity: 0.82
-          font.family: Style.font.family
-          font.pixelSize: Style.font.caption
         }
 
         PanelSectionHeader {
@@ -948,8 +1085,8 @@ Item {
 
               Text {
                 width: parent.width
-                text: String(modelData.status || "pending") + "  ·  "
-                  + String(modelData.destination || "local") + "  ·  revision "
+                text: root.methodStatusLabel(modelData.status) + "  ·  "
+                  + root.methodDestinationLabel(modelData.destination) + "  ·  revision "
                   + String(modelData.revision || 1)
                 color: Color.popups.text
                 opacity: 0.56
@@ -1044,11 +1181,14 @@ Item {
             width: 216
             height: root.controlHeight
             text: root.panel && root.panel.defaultAgent !== ""
-              ? "Connect " + root.panel.agentLabel(root.panel.defaultAgent)
+              ? (root.panel.defaultAgentConnected
+                  ? root.panel.agentLabel(root.panel.defaultAgent) + " connected"
+                  : "Connect " + root.panel.agentLabel(root.panel.defaultAgent))
               : "Choose Omarchy default"
             bordered: true
             focusable: true
-            enabled: root.panel && root.panel.defaultAgent !== "" && !root.commandRunning
+            enabled: root.panel && root.panel.defaultAgent !== ""
+              && !root.panel.defaultAgentConnected && !root.commandRunning
             onClicked: if (root.panel) root.panel.reconcileAgents()
           }
 

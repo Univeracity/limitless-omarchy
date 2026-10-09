@@ -53,6 +53,7 @@ Item {
   property string publicationPolicyDigest: ""
   property string publicationPolicySummary: "Inspect the trust boundary to load the current public publication policy."
   property string defaultAgent: ""
+  property bool defaultAgentConnected: false
   property var additionalAgentIds: []
   property var agentOptions: [
     { id: "agy", label: "Antigravity" },
@@ -88,7 +89,7 @@ Item {
   property bool runtimeReady: false
   property bool runtimeUpdateRequired: false
   property string headline: "Set up Limitless Library"
-  property string detail: "Create an isolated local runtime to begin. Nothing will be shared."
+  property string detail: "Check for reusable work before you build. Keep useful methods for the next person."
   property string disposition: "status"
   property string selectionReference: ""
   property var methodSteps: []
@@ -100,8 +101,11 @@ Item {
   property string commandError: ""
   property string operation: ""
   property string pendingInput: ""
-  readonly property string pluginRoot: manifest && manifest.__sourceDir
-    ? String(manifest.__sourceDir) : ""
+  // Third-party manifests no longer expose the host's private __sourceDir.
+  // Resolve this file's own directory instead of depending on that field.
+  readonly property string pluginRootUrl: String(Qt.resolvedUrl("../"))
+  readonly property string pluginRoot: pluginRootUrl.startsWith("file://")
+    ? decodeURIComponent(pluginRootUrl.slice(7)).replace(/\/$/, "") : ""
   readonly property bool commandRunning: command.running
 
   function open(payloadJson) {
@@ -115,6 +119,7 @@ Item {
       ? requestedSection
       : "library"
     agentOptionsExpanded = false
+    defaultAgentConnected = false
     serviceDetailsExpanded = false
     settingsModalOpen = false
     draftManageRef = ""
@@ -263,7 +268,8 @@ Item {
       "https://limitlesslibrary.com",
       "https://limitlesslibrary.com/#contact",
       "https://univeracity.com",
-      "https://github.com/Univeracity/limitless-omarchy"
+      "https://github.com/Univeracity/limitless-omarchy",
+      "https://github.com/Univeracity/limitlesslibrary/blob/main/docs/MANAGED-SERVICE.md#explicit-anonymous-publication"
     ]
     if (allowed.indexOf(target) !== -1) Qt.openUrlExternally(target)
   }
@@ -501,7 +507,7 @@ Item {
       headline = runtimeReady ? "Local Library ready"
         : runtimeUpdateRequired ? "Update Limitless Library" : "Set up Limitless Library"
       detail = runtimeReady
-        ? "Check approved local work below, or open the service for public and shared reuse."
+        ? "Check trusted work before you build. Verify what fits, then save useful work for others."
         : runtimeUpdateRequired
           ? "This plugin includes a newer runtime. Update it to use the current fixes; your settings and local methods are kept."
           : "Create an isolated local runtime to begin. Nothing will be shared."
@@ -523,6 +529,7 @@ Item {
           defaultStatus = String(connection.status || "")
         }
       }
+      defaultAgentConnected = defaultStatus === "connected"
       if (defaultAgent === "") {
         agentSummary = "Choose a default agent in Omarchy Setup › Defaults › Agent, then return here to connect it."
       } else if (defaultStatus === "connected") {
@@ -544,10 +551,13 @@ Item {
       var results = Array.isArray(value.results) ? value.results : []
       var connectedCount = 0
       var attentionCount = 0
+      defaultAgentConnected = false
       for (var resultIndex = 0; resultIndex < results.length; resultIndex += 1) {
         var result = results[resultIndex] || {}
         if (String(result.status || "") === "connected") connectedCount += 1
         else if (String(result.status || "") !== "disconnected") attentionCount += 1
+        if (String(result.agent || "") === defaultAgent && String(result.status || "") === "connected")
+          defaultAgentConnected = true
       }
       headline = value.action === "disconnect" ? "Agent connections updated" : "Limitless ready for agents"
       detail = connectedCount > 0
@@ -579,8 +589,8 @@ Item {
         publicationPolicySummary = publicationPolicyReady
           ? String(publicationPolicy.revision || "current") + " · " + publicationPolicyDigest
           : "Inspect the trust boundary to load the current public publication policy."
-        headline = "Managed service verified"
-        detail = "The release-pinned service authority and policy were verified. No task query was sent."
+        headline = "Public Library ready"
+        detail = "Check shared work alongside local methods. No task was sent during the connection check."
         serviceSummary = String(service.serviceId || "managed service") + " · "
           + String(service.defaultAudience || "private") + " · "
           + String(service.historyMode || "local-only") + " · "

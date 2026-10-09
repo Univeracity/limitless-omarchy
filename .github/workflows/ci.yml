@@ -69,7 +69,7 @@ jobs:
         run: |
           runtime_data="$(mktemp -d)"
           XDG_DATA_HOME="$runtime_data" scripts/limitless-omarchy-runtime setup --plugin-root . > /tmp/limitless-omarchy-runtime-setup.json
-          "$runtime_data/limitless-omarchy/runtime/bin/python" -c "import limitless_library, limitless_omarchy; assert limitless_omarchy.__version__ == '0.1.1'"
+          "$runtime_data/limitless-omarchy/runtime/bin/python" -c "import limitless_library, limitless_omarchy; assert limitless_omarchy.__version__ == '0.2.0'"
       - name: Build source distribution
         if: matrix.python-version == '3.11'
         run: python -m build --sdist --outdir dist
@@ -96,8 +96,8 @@ jobs:
       - name: Fetch the pinned Quattro plugin validator
         run: |
           git init "$RUNNER_TEMP/omarchy-contract"
-          git -C "$RUNNER_TEMP/omarchy-contract" remote add origin https://github.com/basecamp/omarchy.git
-          git -C "$RUNNER_TEMP/omarchy-contract" fetch --depth=1 origin ed7bae4ac5a570e9df307486e0202fdafcc6ee24
+          git -C "$RUNNER_TEMP/omarchy-contract" remote add origin https://github.com/omacom/omarchy.git
+          git -C "$RUNNER_TEMP/omarchy-contract" fetch --depth=1 origin c352b62d67456f56ca898d0e23effc1b20c25ca6
           git -C "$RUNNER_TEMP/omarchy-contract" checkout --detach FETCH_HEAD
       - name: Validate the distributable plugin
         run: |
@@ -110,7 +110,7 @@ jobs:
         run: |
           git init "$RUNNER_TEMP/omarchy-marketplace"
           git -C "$RUNNER_TEMP/omarchy-marketplace" remote add origin https://github.com/HANCORE-linux/omarchy-plugin-marketplace.git
-          git -C "$RUNNER_TEMP/omarchy-marketplace" fetch --depth=1 origin a9a1620b21065040ab4c0aba60289b08ab69cb99
+          git -C "$RUNNER_TEMP/omarchy-marketplace" fetch --depth=1 origin ef66cc1aa925bf17491ba485a95b96a52daacf83
           git -C "$RUNNER_TEMP/omarchy-marketplace" checkout --detach FETCH_HEAD
       - name: Verify marketplace baseline disposition
         run: |

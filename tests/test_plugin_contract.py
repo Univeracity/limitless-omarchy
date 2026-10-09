@@ -58,7 +58,7 @@ def test_runtime_bundle_pins_a_public_limitless_library_revision() -> None:
     assert core["name"] == "limitless-library"
     assert core["source"] == {
         "repository": "https://github.com/Univeracity/limitlesslibrary",
-        "commit": "129761af2df1b802d05c9e6dcc52d2e708253ffd",
+        "commit": "9db4b7efda37630530ff62f8aac62fbb11d10e19",
     }
 
 
@@ -79,6 +79,8 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert '"library", "agents", "service", "stats", "about"' in panel
     assert "function close()" in panel
     assert '"/scripts/limitless-omarchy-runtime"' in panel
+    assert 'Qt.resolvedUrl("../")' in panel
+    assert "manifest.__sourceDir" not in panel
     assert "function installRuntime()" in panel
     assert "function refreshAgentStatus()" in panel
     assert "function reconcileAgents()" in panel
@@ -163,18 +165,21 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "Connect to Limitless Library service" in contents
     assert "Local reuse is available. Opt in for service discovery." in contents
     assert "Local reuse is available. Checking service discovery." in contents
-    assert "Local reuse and service discovery are available." in contents
+    assert "Limitless finds reusable work for your task." in contents
     assert "Inspect trust boundary" in contents
-    assert "Query Limitless Library service" in contents
+    assert "Check public Library" in contents
     assert "Prepare verified plugin review" in contents
     assert "Install reviewed plugin disabled" in contents
     assert "Enable reviewed plugin" in contents
-    assert "Library settings" in contents
-    assert "DEFAULT SHARING" in contents
-    assert "CONTRIBUTION MODE" in contents
-    assert "Methods + exact sources" in contents
+    assert "Method sharing" in contents
+    assert "WHERE NEW METHODS GO" in contents
+    assert "WHEN TO SAVE METHODS" in contents
+    assert "Methods + exact drafts" in contents
+    assert "Complete solution guide" in contents
+    assert "agent tool registers methods only" in contents
     assert "What are you about to make or change?" in contents
-    assert "PUBLIC AND SHARED REUSE" in contents
+    assert "FIND A BETTER STARTING POINT" in contents
+    assert "SAVE WHAT WORKED" in contents
     assert "View verified publication policy" in contents
     assert "MOVE AVAILABILITY" in contents
     assert "/absolute/path" not in contents
@@ -291,8 +296,8 @@ printf '%s\n' "$*" >>"$PIP_CALL_LOG"
     assert "--only-binary=:all: --require-hashes --force-reinstall --requirement" in calls[0]
     assert str(ROOT / "runtime" / "requirements.lock") in calls[0]
     assert "--no-index --no-deps --force-reinstall" in calls[1]
-    assert str(ROOT / "runtime" / "wheels" / "limitless_library-0.1.0a0-py3-none-any.whl") in calls[1]
-    assert str(ROOT / "runtime" / "wheels" / "limitless_omarchy-0.1.1-py3-none-any.whl") in calls[1]
+    assert str(ROOT / "runtime" / "wheels" / "limitless_library-0.1.0a1-py3-none-any.whl") in calls[1]
+    assert str(ROOT / "runtime" / "wheels" / "limitless_omarchy-0.2.0-py3-none-any.whl") in calls[1]
     assert json.loads(completed.stdout)["status"] == "configured"
     receipt = data_home / "limitless-omarchy" / "installed-bundle.json"
     assert receipt.read_bytes() == (ROOT / "runtime" / "bundle.json").read_bytes()

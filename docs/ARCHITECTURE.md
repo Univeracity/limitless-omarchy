@@ -149,8 +149,8 @@ that exact digest.
 
 Registration is always a fast local transaction. Public work is projected into
 a CC0 source-free method plus a bounded publication draft and sent by a
-detached, non-blocking worker. Local filesystem references stay local; only
-HTTPS source references can appear in public method material. The worker uses
+detached, non-blocking worker. Local filesystem and source references stay
+local; public method material contains only the source-free procedure. The worker uses
 owner-only resumable state, retries service failures without changing the agent
 result, never republishes an existing remote state when a status check fails,
 and pauses on policy drift until the owner reauthorizes the new digest.

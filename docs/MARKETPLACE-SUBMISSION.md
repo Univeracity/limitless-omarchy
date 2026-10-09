@@ -36,7 +36,7 @@ Use this text in the submission's **Maintainer notes** field:
 > manifest. The installer accepts only hash-approved binary dependencies, then
 > installs the local core and adapter wheels with no index, dependency
 > resolution, Git checkout, or package build. The core wheel is tied to public
-> Limitless Library commit `bbd8d312151e01503c85bce40ebbb3fa22aee66d`.
+> Limitless Library commit `9db4b7efda37630530ff62f8aac62fbb11d10e19`.
 > Setup requires no elevated access, does not modify the system Python, and can
 > be skipped; the action is why the marketplace baseline reports the
 > `package-manager` review capability. Managed service
@@ -59,7 +59,7 @@ Use this text in the submission's **Maintainer notes** field:
 ## Exact baseline result
 
 Against marketplace commit
-`a9a1620b21065040ab4c0aba60289b08ab69cb99` on 2026-08-24, the repository's
+`ef66cc1aa925bf17491ba485a95b96a52daacf83` on 2026-10-09, the repository's
 local exact-source preflight produced:
 
 ```text
@@ -106,8 +106,9 @@ The repository is public and submission issue
 [`HANCORE-linux/omarchy-plugin-marketplace#2039`](https://github.com/HANCORE-linux/omarchy-plugin-marketplace/issues/2039)
 is the authoritative review thread. The initial 0.1.0 candidate was marked
 `needs-fixes` because future package-index state could execute code during the
-in-panel build. Version 0.1.1 replaces that path with the verified bundle
-described above.
+in-panel build. Version 0.1.1 replaced that path with the verified bundle. Version 0.2.0
+retains that setup boundary and bundles the current core fixes, canonical method
+publication, local fallback, and streamlined Library, Agents, and Sharing views.
 
 1. Freeze a clean corrective release commit after CI, current Omarchy validation, a real
    Omarchy/Hyprland visual smoke, and a fresh current-marketplace baseline.

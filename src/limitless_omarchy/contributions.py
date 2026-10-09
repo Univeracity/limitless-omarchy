@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from limitless_library.contracts import canonical_json_bytes
+from limitless_library.service_contracts import PublicServiceContractError, validate_source_free_method
 
 from .adapter import AdapterError
 from .service import inspect_managed_service, manage_publication
@@ -345,17 +346,30 @@ def _transition_contribution_locked(
     }
 
 
-def _public_method_text(record: dict[str, Any]) -> str:
+def _public_method_payload(record: dict[str, Any]) -> bytes:
     method = record["method"]
-    lines = [f"# {record['title']}", "", str(method["summary"]), "", "## Steps", ""]
-    lines.extend(f"{index}. {step}" for index, step in enumerate(method["steps"], start=1))
-    lines.extend(["", "## Verification", ""])
-    lines.extend(f"- {item}" for item in method["verification"])
-    public_sources = sorted(source for source in record.get("sourceReferences", []) if source.startswith("https://"))
-    if public_sources:
-        lines.extend(["", "## Public source references", ""])
-        lines.extend(f"- {source}" for source in public_sources)
-    return "\n".join(lines) + "\n"
+    verification = method["verification"]
+    try:
+        canonical = validate_source_free_method(
+            {
+                "summary": method["summary"],
+                "steps": [
+                    {
+                        "index": index,
+                        "instruction": instruction,
+                        "check": "receiver-observation",
+                        "expected": verification[min(index - 1, len(verification) - 1)],
+                    }
+                    for index, instruction in enumerate(method["steps"], start=1)
+                ],
+                "constraints": [],
+                "evaluation": sorted(set(verification)),
+                "limitations": [],
+            }
+        )
+    except PublicServiceContractError as error:
+        raise ContributionError("registered method exceeds the public method contract") from error
+    return canonical_json_bytes(canonical) + b"\n"
 
 
 def _publication_material(
@@ -366,11 +380,13 @@ def _publication_material(
 ) -> Path:
     suffix = _suffix(record["draftRef"])
     root = _directory(registry / "publication", "method publication directory")
-    target = root / suffix
+    # Keep failed Markdown-era material as evidence while rebuilding the same
+    # draft into the canonical JSON format required by the current client.
+    target = root / (suffix + ".canonical-method-v1")
     if target.exists() and (target.is_symlink() or not target.is_dir()):
         raise ContributionError("method publication material is unsafe")
     target.mkdir(mode=0o700, exist_ok=True)
-    method_path = target / "method.md"
+    method_path = target / "method.json"
     publication_path = target / "publication.json"
     interfaces = ["omarchy.plugin/v1"] if record["taskKind"] == "omarchy-customization" else ["limitless.mcp/v1"]
     supported = {
@@ -396,7 +412,7 @@ def _publication_material(
             "parents": parents,
             "supersedes": parent_release,
         },
-        "objects": [{"role": "method", "path": "method.md"}],
+        "objects": [{"role": "method", "path": "method.json"}],
         "compatibility": {"supportedTargets": [supported], "verifiedTargets": []},
         "buildContext": {
             "platform": platform.system().lower() or "unknown",
@@ -408,7 +424,7 @@ def _publication_material(
         "evidenceDigests": [record["contentDigest"]],
         "rights": {"license": "CC0-1.0", "allowedUses": ["derive-method"], "hasAuthority": True},
     }
-    method_payload = _public_method_text(record).encode("utf-8")
+    method_payload = _public_method_payload(record)
     publication_payload = canonical_json_bytes(publication) + b"\n"
     for path, payload in ((method_path, method_payload), (publication_path, publication_payload)):
         if path.exists():

@@ -6,7 +6,7 @@ installing, and explicitly enabling the plugin.
 1. Open the **Limitless Library** bar button.
 2. Select **Install local runtime** and wait for the panel to say "Local
    Library ready." This creates only its XDG-scoped runtime.
-3. Enter a short customization objective and select **Query local Library**.
+3. Enter a short customization objective and select **Check this device**.
 
 Confirm all of the following manually:
 

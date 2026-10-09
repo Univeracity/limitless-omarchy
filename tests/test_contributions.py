@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 from limitless_library.publication import _draft as validate_publication_draft
+from limitless_library.publication import _source_descriptor
+from limitless_library.service_contracts import validate_source_free_method
 
 from limitless_omarchy import contributions as contribution_module
 from limitless_omarchy import mcp_server
@@ -189,6 +191,23 @@ def test_off_setting_makes_registration_a_no_write_noop(tmp_path: Path) -> None:
     assert not list((drafts / "records").glob("*.json")) if (drafts / "records").exists() else True
 
 
+def test_public_retry_keeps_old_markdown_material_and_builds_canonical_method(tmp_path: Path) -> None:
+    drafts, catalog, settings = _paths(tmp_path)
+    save_settings(settings, _settings(destination="public", mode="automatic"))
+    registered = _register(drafts, catalog, settings)
+    record = load_draft(drafts, str(registered["draftRef"]))
+    suffix = str(registered["draftRef"]).split(":", 1)[1]
+    old = drafts / "publication" / suffix
+    old.mkdir(parents=True)
+    (old / "method.md").write_text("# Original queued method\n")
+
+    prepared = contribution_module._publication_material(drafts, record, parent_release=None)
+
+    assert (old / "method.md").read_text() == "# Original queued method\n"
+    assert prepared.parent != old
+    assert _source_descriptor("method", "method.json", base=prepared.parent)["role"] == "method"
+
+
 def test_public_sync_prepares_source_free_material_and_resumes_to_active(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -215,7 +234,13 @@ def test_public_sync_prepares_source_free_material_and_resumes_to_active(
                 "allowedUses": ["derive-method"],
                 "hasAuthority": True,
             }
-            assert "https://example.com/upstream-issue" in (draft_path.parent / "method.md").read_text(encoding="utf-8")
+            method_path = draft_path.parent / "method.json"
+            method = validate_source_free_method(json.loads(method_path.read_text(encoding="utf-8")))
+            assert method["steps"][0]["instruction"] == "Check lock state before replacing live files."
+            assert _source_descriptor("method", method_path.name, base=draft_path.parent)["role"] == "method"
+            assert load_draft(drafts, str(registered["draftRef"]))["sourceReferences"] == [
+                "https://example.com/upstream-issue"
+            ]
             return {
                 "submissionRef": "submission:" + "1" * 32,
                 "admissionState": "pending",

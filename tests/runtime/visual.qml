@@ -51,12 +51,13 @@ ShellRoot {
     property bool serviceUsageExceeded: false
     property string serviceUsageResetsAt: ""
     property string serviceUpgradeUrl: "https://limitlesslibrary.com/#contact"
-    property bool serviceArtifactStageAvailable: true
-    property bool serviceArtifactReviewAvailable: true
+    property bool serviceArtifactStageAvailable: false
+    property bool serviceArtifactReviewAvailable: false
     property bool serviceArtifactInstallAvailable: false
     property bool serviceArtifactEnableAvailable: false
     property bool publicationPolicyReady: true
     property string defaultAgent: "codex"
+    property bool defaultAgentConnected: true
     property var additionalAgentIds: ["claude"]
     property var agentOptions: [
       { id: "agy", label: "Antigravity" },
@@ -90,7 +91,7 @@ ShellRoot {
     property int statsAgentsAttention: 0
     property bool statsServiceConnected: true
     property string headline: "Local Library ready"
-    property string detail: "Local reuse is available. Opt in for service discovery."
+    property string detail: "Check trusted work before you build. Verify what fits, then save useful work for others."
     property string selectionReference: ""
     property string errorText: ""
     property string operation: ""
