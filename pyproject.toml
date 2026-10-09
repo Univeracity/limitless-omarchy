@@ -14,7 +14,7 @@ authors = [{name = "Limitless Library"}]
 dependencies = []
 keywords = ["agents", "omarchy", "quickshell", "reuse", "verification"]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 3 - Alpha",
   "Environment :: X11 Applications :: Qt",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",

@@ -58,7 +58,7 @@ def test_runtime_bundle_pins_a_public_limitless_library_revision() -> None:
     assert core["name"] == "limitless-library"
     assert core["source"] == {
         "repository": "https://github.com/Univeracity/limitlesslibrary",
-        "commit": "9db4b7efda37630530ff62f8aac62fbb11d10e19",
+        "commit": "b9249e8de3e2cf558b70719dcd6e7a2ec44dd352",
     }
 
 

@@ -18,7 +18,7 @@ runtime, and the native validator has been rerun against this revision. Update
 the pin only after checking the manifest, lifecycle, and validator behavior.
 
 The reviewed runtime bundle ties the public Limitless Library core wheel to
-commit 9db4b7efda37630530ff62f8aac62fbb11d10e19 and an exact SHA-256 digest.
+commit b9249e8de3e2cf558b70719dcd6e7a2ec44dd352 and an exact SHA-256 digest.
 Update it only after reproducible wheel builds and this adapter's full test,
 package, distribution, and bundle-verification checks pass.
 

@@ -36,7 +36,7 @@ Use this text in the submission's **Maintainer notes** field:
 > manifest. The installer accepts only hash-approved binary dependencies, then
 > installs the local core and adapter wheels with no index, dependency
 > resolution, Git checkout, or package build. The core wheel is tied to public
-> Limitless Library commit `9db4b7efda37630530ff62f8aac62fbb11d10e19`.
+> Limitless Library commit `b9249e8de3e2cf558b70719dcd6e7a2ec44dd352`.
 > Setup requires no elevated access, does not modify the system Python, and can
 > be skipped; the action is why the marketplace baseline reports the
 > `package-manager` review capability. Managed service
