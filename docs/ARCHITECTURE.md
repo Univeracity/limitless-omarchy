@@ -221,7 +221,7 @@ An explicit `--profile` option remains in the lower-level CLI for another
 owner-reviewed compatible service. It is not exposed in ordinary panel setup
 and cannot redefine the release-pinned official identity.
 
-The private service owns identity, policy evaluation, scopes, grants,
+The managed service provides identity, policy evaluation, scopes, grants,
 revocation, ranking, persistence, and managed coordination. The plugin works
 without those facilities and never makes connection imply capture,
 publication, installation, or enablement.
