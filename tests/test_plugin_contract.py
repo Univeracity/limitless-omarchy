@@ -58,7 +58,7 @@ def test_runtime_bundle_pins_a_public_limitless_library_revision() -> None:
     assert core["name"] == "limitless-library"
     assert core["source"] == {
         "repository": "https://github.com/Univeracity/limitlesslibrary",
-        "commit": "45ccf29da6c16ca60aa425b7cead463b5e8bed6a",
+        "commit": "b9249e8de3e2cf558b70719dcd6e7a2ec44dd352",
     }
 
 
@@ -79,6 +79,8 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert '"library", "agents", "service", "stats", "about"' in panel
     assert "function close()" in panel
     assert '"/scripts/limitless-omarchy-runtime"' in panel
+    assert 'Qt.resolvedUrl("../")' in panel
+    assert "manifest.__sourceDir" not in panel
     assert "function installRuntime()" in panel
     assert "function refreshAgentStatus()" in panel
     assert "function reconcileAgents()" in panel
@@ -145,7 +147,7 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "ScrollBar.vertical" in contents
     assert "included example" not in (panel + contents).lower()
     assert "See what Limitless has been doing in the background." in contents
-    assert "Looks like reuse showed up to work. Nice." in contents
+    assert "Work found. Receiver checks decide whether it helps." in contents
     assert 'text: statTile.loading ? "◒" : statTile.value' in contents
     assert "running: statTile.loading" in contents
     assert "onRunningChanged: if (!running) statValue.rotation = 0" in contents
@@ -163,18 +165,21 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "Connect to Limitless Library service" in contents
     assert "Local reuse is available. Opt in for service discovery." in contents
     assert "Local reuse is available. Checking service discovery." in contents
-    assert "Local reuse and service discovery are available." in contents
+    assert "Limitless finds reusable work for your task." in contents
     assert "Inspect trust boundary" in contents
-    assert "Query Limitless Library service" in contents
+    assert "Check public Library" in contents
     assert "Prepare verified plugin review" in contents
     assert "Install reviewed plugin disabled" in contents
     assert "Enable reviewed plugin" in contents
-    assert "Library settings" in contents
-    assert "DEFAULT SHARING" in contents
-    assert "CONTRIBUTION MODE" in contents
-    assert "Methods + exact sources" in contents
+    assert "Method sharing" in contents
+    assert "WHERE NEW METHODS GO" in contents
+    assert "WHEN TO SAVE METHODS" in contents
+    assert "Methods + exact drafts" in contents
+    assert "Complete solution guide" in contents
+    assert "agent tool registers methods only" in contents
     assert "What are you about to make or change?" in contents
-    assert "PUBLIC AND SHARED REUSE" in contents
+    assert "FIND A BETTER STARTING POINT" in contents
+    assert "SAVE WHAT WORKED" in contents
     assert "View verified publication policy" in contents
     assert "MOVE AVAILABILITY" in contents
     assert "/absolute/path" not in contents
@@ -263,6 +268,7 @@ CLI
   chmod +x "$runtime/bin/python" "$runtime/bin/limitless-omarchy"
   exit 0
 fi
+[[ ${FAIL_BUNDLE_INSTALL:-0} != 1 ]] || exit 1
 printf '%s\n' "$*" >>"$PIP_CALL_LOG"
 """,
         encoding="utf-8",
@@ -290,10 +296,35 @@ printf '%s\n' "$*" >>"$PIP_CALL_LOG"
     assert "--only-binary=:all: --require-hashes --force-reinstall --requirement" in calls[0]
     assert str(ROOT / "runtime" / "requirements.lock") in calls[0]
     assert "--no-index --no-deps --force-reinstall" in calls[1]
-    assert str(ROOT / "runtime" / "wheels" / "limitless_library-0.1.0a0-py3-none-any.whl") in calls[1]
-    assert str(ROOT / "runtime" / "wheels" / "limitless_omarchy-0.1.1-py3-none-any.whl") in calls[1]
+    assert str(ROOT / "runtime" / "wheels" / "limitless_library-0.1.0a1-py3-none-any.whl") in calls[1]
+    assert str(ROOT / "runtime" / "wheels" / "limitless_omarchy-0.2.0-py3-none-any.whl") in calls[1]
     assert json.loads(completed.stdout)["status"] == "configured"
+    receipt = data_home / "limitless-omarchy" / "installed-bundle.json"
+    assert receipt.read_bytes() == (ROOT / "runtime" / "bundle.json").read_bytes()
+    assert receipt.stat().st_mode & 0o777 == 0o600
     assert sorted(path.relative_to(ROOT) for path in ROOT.rglob("*") if path.is_file()) == before
+
+    owned = data_home / "limitless-omarchy" / "catalog" / "local-owned" / "capsule.json"
+    owned.parent.mkdir(parents=True)
+    owned.write_bytes(b"owner-local method\n")
+    failed = subprocess.run(
+        [str(runtime), "setup", "--plugin-root", str(ROOT)],
+        check=False,
+        capture_output=True,
+        text=True,
+        env={**environment, "FAIL_BUNDLE_INSTALL": "1"},
+    )
+    assert failed.returncode != 0
+    assert not receipt.exists()
+    assert owned.read_bytes() == b"owner-local method\n"
+    status = subprocess.run(
+        [str(runtime), "status", "--plugin-root", str(ROOT)],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=environment,
+    )
+    assert json.loads(status.stdout)["service"]["reason"] == "local-runtime-update-required"
 
 
 def test_runtime_bundle_is_complete_and_rejects_digest_tampering(tmp_path: Path) -> None:
@@ -350,6 +381,7 @@ def test_panel_runtime_forwards_publication_only_over_stdin(tmp_path: Path) -> N
     data_home = tmp_path / "xdg-data"
     runtime_bin = data_home / "limitless-omarchy" / "runtime" / "bin"
     runtime_bin.mkdir(parents=True)
+    shutil.copyfile(ROOT / "runtime" / "bundle.json", runtime_bin.parent.parent / "installed-bundle.json")
     captured_arguments = tmp_path / "arguments.txt"
     captured_input = tmp_path / "input.json"
     _mock_command(
@@ -400,6 +432,7 @@ def test_panel_runtime_reconciles_the_default_and_optional_agents_through_its_ow
     data_home = tmp_path / "xdg-data"
     runtime_bin = data_home / "limitless-omarchy" / "runtime" / "bin"
     runtime_bin.mkdir(parents=True)
+    shutil.copyfile(ROOT / "runtime" / "bundle.json", runtime_bin.parent.parent / "installed-bundle.json")
     captured_arguments = tmp_path / "arguments.txt"
     _mock_command(
         runtime_bin,

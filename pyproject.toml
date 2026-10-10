@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "limitless-omarchy"
-version = "0.1.1"
+version = "0.2.0"
 description = "Local-first Limitless Library adapter for Omarchy customizations."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -14,7 +14,7 @@ authors = [{name = "Limitless Library"}]
 dependencies = []
 keywords = ["agents", "omarchy", "quickshell", "reuse", "verification"]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 3 - Alpha",
   "Environment :: X11 Applications :: Qt",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",

@@ -61,7 +61,8 @@ Direct installation steps:
 4. Select the Limitless `<` button on the right side of the bar.
 5. Select **Install local runtime**.
 6. Describe what you are about to make or change, then select
-   **Query local Library**.
+   **Check this device**. If you connect the service, **Check public Library**
+   looks for more work with the same objective.
 
 The setup action creates an isolated runtime beneath the user's XDG data
 directory. It does not modify the system Python, require elevated privileges,
@@ -96,6 +97,11 @@ terminal command, prompt duplication, repository path, or receiver profile is
 required from the user. Codex, Claude Code, Grok, and Antigravity CLI have
 verified setup adapters; unsupported clients remain untouched.
 
+After a plugin update, the panel offers **Update local runtime** when the
+installed runtime no longer matches the bundled version. That action keeps
+your settings and locally registered methods while installing the reviewed
+runtime fixes.
+
 The Library tab always begins locally:
 
 > Local reuse is available. Opt in for service discovery.
@@ -108,7 +114,7 @@ After the owner connects the service, that state becomes:
 
 | Surface | Purpose |
 | --- | --- |
-| **Library** | Query local or opted-in service discovery; configure contribution defaults. |
+| **Library** | Check local or opted-in public work, then choose how to save a useful method. |
 | **Agents** | See the Omarchy default agent and optionally connect additional supported agents. |
 | **Service** | Inspect connection, identity, policy, usage, and account or organization state. |
 | **Stats** | View private aggregate Omarchy and general-Limitless activity. |
@@ -167,8 +173,13 @@ does not block the originating agent. A policy change pauses publication until
 the owner saves against the new verified digest.
 
 Methods are independently authored and source-free. Exact-source publication
-is a separate owner choice. Local paths never enter public method material;
-optional public HTTPS references may accompany it.
+is a separate owner choice. The Library panel now presents both paths: **Method
+sharing** sets where a connected agent saves steps and checks after useful work;
+**Complete solution guide** opens the [reviewed publication flow](https://github.com/Univeracity/limitlesslibrary/blob/main/docs/MANAGED-SERVICE.md#explicit-anonymous-publication)
+for exact files. The material preference records what the owner may review later;
+it does not upload source or give the method tool an exact-source action. Local
+paths and optional source references stay in the local record. Public method
+submission uses a canonical object accepted by the Library service.
 
 ## Agent support
 
@@ -210,7 +221,7 @@ For offline development against a local Limitless Library checkout:
 
 ```bash
 python3 -m pip install --no-index --no-deps \
-  runtime/wheels/limitless_library-0.1.0a0-py3-none-any.whl
+  runtime/wheels/limitless_library-0.1.0a1-py3-none-any.whl
 python3 -m pip install --no-deps -e .
 ```
 
@@ -272,7 +283,7 @@ real-session validation path.
 
 ```bash
 python3 -m pip install --no-index --no-deps \
-  runtime/wheels/limitless_library-0.1.0a0-py3-none-any.whl
+  runtime/wheels/limitless_library-0.1.0a1-py3-none-any.whl
 python3 -m pip install -e '.[dev]'
 python3 scripts/verify-runtime-bundle.py --root .
 pytest

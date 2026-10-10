@@ -7,22 +7,22 @@
   "packages": [
     {
       "name": "limitless-library",
-      "version": "0.1.0a0",
-      "path": "runtime/wheels/limitless_library-0.1.0a0-py3-none-any.whl",
-      "sha256": "f3999c19bcc5663a53a0b82f928bedf725d1cf42be64c1e917c385c57499c639",
+      "version": "0.1.0a1",
+      "path": "runtime/wheels/limitless_library-0.1.0a1-py3-none-any.whl",
+      "sha256": "1f776299c684e1b52430585b640917a37ca88eac9ef0db0414ad0e18e8094986",
       "source": {
         "repository": "https://github.com/Univeracity/limitlesslibrary",
-        "commit": "45ccf29da6c16ca60aa425b7cead463b5e8bed6a"
+        "commit": "b9249e8de3e2cf558b70719dcd6e7a2ec44dd352"
       }
     },
     {
       "name": "limitless-omarchy",
-      "version": "0.1.1",
-      "path": "runtime/wheels/limitless_omarchy-0.1.1-py3-none-any.whl",
-      "sha256": "d622811e43d6d3375d9dfdc15a46bfc354b7587bdb12c6518fce7bb43f2a72f9",
+      "version": "0.2.0",
+      "path": "runtime/wheels/limitless_omarchy-0.2.0-py3-none-any.whl",
+      "sha256": "cf3d8c90e05d173baf0c4b89626741f5283fb6bb2b566075ff9b10d1c1759d8a",
       "source": {
         "repository": "https://github.com/Univeracity/limitless-omarchy",
-        "release": "0.1.1"
+        "release": "0.2.0"
       }
     }
   ],

@@ -113,6 +113,7 @@ fi
 runtime_root=$XDG_DATA_HOME/limitless-omarchy
 runtime=$runtime_root/runtime
 runtime_cli=$runtime/bin/limitless-omarchy
+installed_bundle=$runtime_root/installed-bundle.json
 agent_state_dir=$runtime_root/agent-connection
 activity_path=$runtime_root/activity.json
 catalog_root=$runtime_root/catalog
@@ -126,6 +127,19 @@ else
 fi
 runtime_available() {
   [[ -d $runtime && ! -L $runtime && -x $runtime_cli && ! -L $runtime_cli ]]
+}
+
+runtime_matches_bundle() {
+  [[ -f $installed_bundle && ! -L $installed_bundle ]] \
+    && cmp -s -- "$installed_bundle" "$plugin_root/runtime/bundle.json"
+}
+
+record_installed_bundle() {
+  local receipt
+  receipt=$(mktemp "$runtime_root/.installed-bundle.XXXXXX")
+  cp -- "$plugin_root/runtime/bundle.json" "$receipt"
+  chmod 600 "$receipt"
+  mv -f -- "$receipt" "$installed_bundle"
 }
 
 sync_seed_catalog() {
@@ -182,6 +196,9 @@ setup_runtime() {
     "$python_command" -m venv "$runtime"
   fi
 
+  # A failed reinstall must never leave an old success marker behind.
+  [[ ! -L $installed_bundle ]] || fail "the installed bundle receipt is unsafe"
+  rm -f -- "$installed_bundle"
   PIP_DISABLE_PIP_VERSION_CHECK=1 "$runtime/bin/python" -m pip install \
     --disable-pip-version-check --no-input --only-binary=:all: --require-hashes \
     --force-reinstall --requirement "$plugin_root/runtime/requirements.lock" >&2
@@ -189,6 +206,11 @@ setup_runtime() {
     --disable-pip-version-check --no-input --no-index --no-deps --force-reinstall \
     "${bundle_wheels[@]}" >&2
 }
+
+if [[ $action != setup ]] && runtime_available && ! runtime_matches_bundle; then
+  status_json "setup-required" "local-runtime-update-required"
+  exit 0
+fi
 
 case "$action" in
   status)
@@ -207,6 +229,7 @@ case "$action" in
   setup)
     setup_runtime
     sync_seed_catalog
+    record_installed_bundle
     exec "$runtime_cli" agent-reconcile \
       --state-dir "$agent_state_dir" \
       --runtime-cli "$runtime_cli" \

@@ -149,8 +149,8 @@ that exact digest.
 
 Registration is always a fast local transaction. Public work is projected into
 a CC0 source-free method plus a bounded publication draft and sent by a
-detached, non-blocking worker. Local filesystem references stay local; only
-HTTPS source references can appear in public method material. The worker uses
+detached, non-blocking worker. Local filesystem and source references stay
+local; public method material contains only the source-free procedure. The worker uses
 owner-only resumable state, retries service failures without changing the agent
 result, never republishes an existing remote state when a status check fails,
 and pauses on policy drift until the owner reauthorizes the new digest.
@@ -221,7 +221,7 @@ An explicit `--profile` option remains in the lower-level CLI for another
 owner-reviewed compatible service. It is not exposed in ordinary panel setup
 and cannot redefine the release-pinned official identity.
 
-The private service owns identity, policy evaluation, scopes, grants,
+The managed service provides identity, policy evaluation, scopes, grants,
 revocation, ranking, persistence, and managed coordination. The plugin works
 without those facilities and never makes connection imply capture,
 publication, installation, or enablement.

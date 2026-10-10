@@ -6,13 +6,16 @@ installing, and explicitly enabling the plugin.
 1. Open the **Limitless Library** bar button.
 2. Select **Install local runtime** and wait for the panel to say "Local
    Library ready." This creates only its XDG-scoped runtime.
-3. Enter a short customization objective and select **Query local Library**.
+3. Enter a short customization objective and select **Check this device**.
 
 Confirm all of the following manually:
 
 1. The panel opens from the bar without a Quickshell error.
 2. Setup does not request elevated access or alter the system Python.
 3. The runtime-owned catalog returns an eligible component or source-free method, or a justified abstention.
+   For a method, read its steps and verification in the panel. A new query or
+   closing the panel must clear the previous method. Tab must reach the objective
+   field, and the panel must fit the screen with its longer content scrollable.
 4. No catalog path is requested or displayed in the panel.
 5. If Omarchy has a supported default agent, setup reports its local MCP
    connection without replacing unrelated configured servers.

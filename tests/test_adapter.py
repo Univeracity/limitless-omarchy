@@ -398,6 +398,40 @@ def test_managed_unavailability_abstains_without_disabling_local_reuse(tmp_path:
     assert result["selection"] is None
 
 
+def test_identity_setup_outage_preserves_query_and_inspection_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    from limitless_library.service_identity import ServiceIdentityUnavailableError
+
+    def unavailable() -> object:
+        raise ServiceIdentityUnavailableError("private transport failure")
+
+    monkeypatch.setattr(service_module, "activated_service_connector", unavailable)
+    query = query_managed_service(objective="Private objective", runner=shell_available)
+    inspected = inspect_managed_service()
+    assert query["reason"] == inspected["reason"] == "service-unavailable-local-still-available"
+    assert query["disposition"] == "abstain"
+    assert query["selection"] is None
+    assert query["requestDigest"] is None
+    assert query["service"] is inspected["service"] is None
+    assert "Private objective" not in json.dumps(query)
+    assert "private transport failure" not in json.dumps([query, inspected])
+
+
+def test_discovery_outage_before_query_binding_preserves_fallback(tmp_path: Path) -> None:
+    class UnavailableDiscovery(FakeServiceConnector):
+        def build_query(self, **_kwargs: object) -> dict[str, object]:
+            raise ServiceUnavailableError("discovery offline")
+
+    result = query_managed_service(
+        service_profile(tmp_path),
+        objective="Check a plugin",
+        runner=shell_available,
+        connector_factory=UnavailableDiscovery,
+    )
+    assert result["reason"] == "service-unavailable-local-still-available"
+    assert result["requestDigest"] is None
+    assert result["selection"] is None
+
+
 def test_managed_usage_limit_preserves_local_reuse_and_exposes_only_safe_upgrade_details(
     tmp_path: Path,
 ) -> None:
@@ -918,6 +952,23 @@ def test_bundled_catalog_is_sealed_and_queryable() -> None:
 
     assert result["disposition"] == "source-free-method"
     assert result["decision"]["selected"]["capsule"]["id"] == "capsule:omarchy.reading-focus-method"
+
+
+def test_bundled_reading_method_does_not_answer_an_unmatched_objective() -> None:
+    catalog = Path(__file__).parents[1] / "catalog"
+    match = query_local_catalog(
+        catalog,
+        objective="Create a distraction-free reading layout with a restore path",
+        runner=shell_available,
+    )
+    mismatch = query_local_catalog(
+        catalog,
+        objective="Replace a Windows printer driver with a macOS kernel extension",
+        runner=shell_available,
+    )
+    assert match["disposition"] == "source-free-method"
+    assert mismatch["disposition"] == "abstain"
+    assert mismatch["decision"]["selected"] is None
 
 
 def test_query_fails_closed_for_unavailable_catalog(tmp_path: Path) -> None:
