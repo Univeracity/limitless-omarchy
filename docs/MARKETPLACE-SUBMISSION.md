@@ -117,7 +117,8 @@ The repository is public. The initial 0.1.0 candidate in
 `needs-fixes` because future package-index state could execute code during the
 in-panel build. Version 0.1.1 replaced that path with the verified bundle. Version 0.2.0
 retains that setup boundary and bundles the current core fixes, canonical method
-publication, local fallback, and streamlined Library, Agents, and Sharing views.
+publication, local fallback, streamlined Library and Agents views, and in-panel
+sharing controls.
 The current update review belongs in
 [#10975](https://github.com/omacom/omarchy-plugin-marketplace/issues/10975).
 
