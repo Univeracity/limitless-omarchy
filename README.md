@@ -5,6 +5,10 @@
 <h1 align="center">Limitless Library for Omarchy</h1>
 
 <p align="center">
+  <a href="https://github.com/Univeracity/limitless-omarchy/releases/tag/v0.2.0"><img alt="Alpha" src="https://img.shields.io/badge/status-alpha-6b7280"></a>
+</p>
+
+<p align="center">
   <strong>Ask before you build. Reuse what fits. Prove it worked.</strong><br>
   Local-first verified reuse for Omarchy customizations and general agent work.
 </p>
@@ -51,6 +55,10 @@ access to the Limitless Library service. The CLI is available for lower-level
 control, but ordinary use stays in the UI.
 
 ## Start in Omarchy
+
+The current published release is [0.2.0 alpha](https://github.com/Univeracity/limitless-omarchy/releases/tag/v0.2.0),
+bundling the Limitless Library `0.1.0a1` alpha core. Interfaces and behavior may
+change before a stable release; review the [compatibility guide](docs/COMPATIBILITY.md).
 
 Direct installation steps:
 
@@ -262,6 +270,11 @@ Please report security issues through [SECURITY.md](SECURITY.md), not a public
 issue.
 
 ## Marketplace verification
+
+The `0.2.0` alpha is published on GitHub and its
+[marketplace update review](https://github.com/omacom/omarchy-plugin-marketplace/issues/10975)
+is pending. The marketplace's verified `0.1.1` snapshot remains the listed
+version until that update is approved.
 
 The repository includes the root manifest, README, Apache-2.0 license, owned
 preview, safe removal instructions, native Omarchy validation, and current
