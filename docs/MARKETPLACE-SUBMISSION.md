@@ -1,30 +1,35 @@
 # Omarchy marketplace submission and verification
 
-This file prepares the repository for omarchyplugins.com. It does not submit
-the plugin, make the repository public, create a release, or claim a security
-certification.
+The `0.2.0` alpha is published on GitHub. Its marketplace update is pending in
+[`omacom/omarchy-plugin-marketplace#10975`](https://github.com/omacom/omarchy-plugin-marketplace/issues/10975).
+The existing verified listing remains at `0.1.1` until the update is approved.
+This guide records the review boundary and the process for qualifying a newer
+commit; it does not claim a security certification.
 
 Authoritative process references:
 
-- [Marketplace submission guide](https://github.com/HANCORE-linux/omarchy-plugin-marketplace/blob/main/SUBMISSION.md)
-- [Marketplace verification definition](https://github.com/HANCORE-linux/omarchy-plugin-marketplace/blob/main/VERIFICATION.md)
-- [Marketplace security baseline](https://github.com/HANCORE-linux/omarchy-plugin-marketplace/blob/main/SECURITY.md)
-- [Official Omarchy shell-plugin guide](https://github.com/basecamp/omarchy/blob/quattro/manual/32-shell-plugins.md)
+- [Marketplace submission guide](https://github.com/omacom/omarchy-plugin-marketplace/blob/main/SUBMISSION.md)
+- [Marketplace verification definition](https://github.com/omacom/omarchy-plugin-marketplace/blob/main/VERIFICATION.md)
+- [Marketplace security baseline](https://github.com/omacom/omarchy-plugin-marketplace/blob/main/SECURITY.md)
+- [Official Omarchy shell-plugin guide](https://github.com/omacom/omarchy/blob/c352b62d67456f56ca898d0e23effc1b20c25ca6/manual/32-shell-plugins.md)
 
 ## Listing metadata
 
 - Repository: `https://github.com/Univeracity/limitless-omarchy`
 - Plugin ID: `univeracity.limitless-library`
 - Category: `Productivity`
-- Tags: `AI`, `Quickshell`, `Security`
+- Tags: `ai`, `quickshell`, `security`
 - License: Apache-2.0
 
-The ID was absent from the marketplace registry when checked on 2026-08-24.
-It is the permanent marketplace identity and should not change after listing.
+The initial listing was established through
+[#2039](https://github.com/omacom/omarchy-plugin-marketplace/issues/2039).
+The plugin ID is its permanent marketplace identity and should not change.
 
 ## Maintainer notes
 
-Use this text in the submission's **Maintainer notes** field:
+For an update, post these notes as a separate comment on the review issue.
+Preserve the verification form's exact headings; it has no **Maintainer notes**
+field.
 
 > Limitless Library is a panel plus bar widget. Omarchy's ordinary Git add,
 > validation, review, and enable flow runs no plugin install hook. After the
@@ -58,9 +63,10 @@ Use this text in the submission's **Maintainer notes** field:
 
 ## Exact baseline result
 
-Against marketplace commit
-`ef66cc1aa925bf17491ba485a95b96a52daacf83` on 2026-10-09, the repository's
-local exact-source preflight produced:
+CI pins marketplace scanner commit
+`ef66cc1aa925bf17491ba485a95b96a52daacf83`. The release preflight against
+that pin on 2026-10-09 and the marketplace update reports on 2026-10-10
+produced:
 
 ```text
 outcome: review-required
@@ -78,6 +84,10 @@ are refused, and the shipped wheels are digest-bound and verified before
 installation. The preflight is enforced in CI by
 `scripts/verify-marketplace-baseline.mjs` against the pinned marketplace
 scanner source.
+
+The update issue's bot reports record the current scanner policy and exact
+target commit. A passing pinned CI check does not replace those fresh reports
+or the required maintainer review.
 
 This result is intentionally not rewritten into an automatic `passed` result.
 Removing the UI-owned setup would make first use worse and would hide the real
@@ -100,27 +110,32 @@ commit as Verified.
 | Privilege | No `sudo`, `pkexec`, system-Python modification, service unit, sudoers policy, or passwordless privilege path. |
 | Desktop mutation | A query never changes the desktop. Reviewed exact-component installation and enablement are separate actions and use Omarchy's native lifecycle. |
 
-## Corrective review checklist
+## Update review checklist
 
-The repository is public and submission issue
-[`HANCORE-linux/omarchy-plugin-marketplace#2039`](https://github.com/HANCORE-linux/omarchy-plugin-marketplace/issues/2039)
-is the authoritative review thread. The initial 0.1.0 candidate was marked
+The repository is public. The initial 0.1.0 candidate in
+[#2039](https://github.com/omacom/omarchy-plugin-marketplace/issues/2039) was marked
 `needs-fixes` because future package-index state could execute code during the
 in-panel build. Version 0.1.1 replaced that path with the verified bundle. Version 0.2.0
 retains that setup boundary and bundles the current core fixes, canonical method
-publication, local fallback, and streamlined Library, Agents, and Sharing views.
+publication, local fallback, streamlined Library and Agents views, and in-panel
+sharing controls.
+The current update review belongs in
+[#10975](https://github.com/omacom/omarchy-plugin-marketplace/issues/10975).
 
-1. Freeze a clean corrective release commit after CI, current Omarchy validation, a real
+1. Freeze a clean release commit after CI, current Omarchy validation, a real
    Omarchy/Hyprland visual smoke, and a fresh current-marketplace baseline.
 2. Confirm the repository root contains `manifest.json`, `README.md`,
    `LICENSE`, installation and removal directions, and the owned root preview.
 3. Confirm `Univeracity/limitless-omarchy` remains public, active, and
    unarchived.
-4. Record the full 40-character corrective `main` SHA. Do not push another commit
+4. Record the full 40-character target `main` SHA. Do not push another commit
    while the submission is being reviewed unless the submission is deliberately
    rerun against the new SHA.
-5. Comment on issue #2039 with the corrective SHA and the supply-chain,
-   combined-MCP, and icon changes. Do not open a duplicate submission.
+5. Set the current update issue's **Target commit** to that SHA. For a future
+   update without an open review, use the marketplace's **Plugin verification**
+   form and choose **Verify and publish a newer upstream commit**. Keep the six
+   form headings intact and put supporting notes in a separate comment. Do not
+   open a duplicate review for the same update.
 6. Review the bot's compatibility and static-baseline reports. The expected
    disposition is `review-required`, with no findings and only
    `package-manager`.

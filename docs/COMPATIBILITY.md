@@ -2,13 +2,16 @@
 
 ## Supported contract
 
-This initial adapter targets Omarchy's Quattro plugin contract:
+The `0.2.0` alpha adapter targets Omarchy's Quattro plugin contract:
 
 - plugin manifest schema version 1;
 - a third-party, non-reserved panel and bar-widget identifier;
 - QML panel and bar-widget entry points;
 - native validation through the Omarchy plugin validation command; and
 - native reload or discovery through the Omarchy shell rescan command.
+
+Alpha status means interfaces and behavior may change before a stable release.
+The pinned contract and checks below describe the current supported scope.
 
 The contract is pinned in CI to Omarchy Quattro commit
 c352b62d67456f56ca898d0e23effc1b20c25ca6. The live shell at this

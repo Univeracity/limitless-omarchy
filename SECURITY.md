@@ -2,6 +2,10 @@
 
 ## Scope
 
+The current published plugin is `0.2.0` alpha, with the `0.1.0a1` alpha core.
+Security fixes target this release and `main`; alpha status does not provide
+security or interface stability guarantees.
+
 This repository contains an Omarchy shell plugin and a local Python companion
 CLI. Omarchy plugins execute as unsandboxed code within a long-lived desktop
 shell, so review this repository before enabling it.

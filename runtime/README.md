@@ -1,5 +1,7 @@
 # Reviewed runtime bundle
 
+The `0.2.0` alpha plugin bundles the Limitless Library `0.1.0a1` alpha core.
+
 The Omarchy panel installs no mutable Git checkout and runs no package build.
 It verifies this directory first, installs the complete dependency graph from
 `requirements.lock` with hashes required and binary distributions only, then
