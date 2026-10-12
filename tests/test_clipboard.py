@@ -99,9 +99,12 @@ def test_cancellation_terminates_the_reader_and_its_transfer(tmp_path: Path) -> 
         stdout, stderr = process.communicate(timeout=1)
         assert json.loads(stdout) == {"ok": False, "error": "Clipboard read canceled."}
         assert stderr == ""
-        status = Path(f"/proc/{child}/stat")
         # The watchdog and transfer are killed together. A transfer waiting
         # for init to reap it is stopped, even while its zombie PID exists.
+        status = Path(f"/proc/{child}/stat")
+        deadline = time.monotonic() + 0.5
+        while status.exists() and status.read_text().split()[2] != "Z" and time.monotonic() < deadline:
+            time.sleep(0.01)
         assert not status.exists() or status.read_text().split()[2] == "Z"
     finally:
         if process.poll() is None:
