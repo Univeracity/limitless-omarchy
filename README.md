@@ -5,7 +5,7 @@
 <h1 align="center">Limitless Library for Omarchy</h1>
 
 <p align="center">
-  <a href="https://github.com/Univeracity/limitless-omarchy/releases/tag/v0.2.0"><img alt="Alpha" src="https://img.shields.io/badge/status-alpha-6b7280"></a>
+  <a href="https://github.com/Univeracity/limitless-omarchy/releases/tag/v0.2.1"><img alt="Alpha" src="https://img.shields.io/badge/status-alpha-6b7280"></a>
 </p>
 
 <p align="center">
@@ -56,7 +56,7 @@ control, but ordinary use stays in the UI.
 
 ## Start in Omarchy
 
-The current published release is [0.2.0 alpha](https://github.com/Univeracity/limitless-omarchy/releases/tag/v0.2.0),
+The current published release is [0.2.1 alpha](https://github.com/Univeracity/limitless-omarchy/releases/tag/v0.2.1),
 bundling the Limitless Library `0.1.0a1` alpha core. Interfaces and behavior may
 change before a stable release; review the [compatibility guide](docs/COMPATIBILITY.md).
 
@@ -71,6 +71,12 @@ Direct installation steps:
 6. Describe what you are about to make or change, then select
    **Check this device**. If you connect the service, **Check public Library**
    looks for more work with the same objective.
+
+Typing and input-method editing stay native. Paste uses **Paste**, Ctrl+V,
+Shift+Insert, or middle-click for the primary selection. An isolated reader
+accepts at most 2 KiB within two seconds; invalid or oversized input leaves
+the field unchanged. Paste requires `wl-clipboard` and GNU coreutils; if
+unavailable, typing still works. See [clipboard behavior and checks](docs/CLIPBOARD-INPUT.md).
 
 The setup action creates an isolated runtime beneath the user's XDG data
 directory. It does not modify the system Python, require elevated privileges,
@@ -271,7 +277,7 @@ issue.
 
 ## Marketplace verification
 
-The `0.2.0` alpha is published on GitHub and its
+The `0.2.1` alpha is published on GitHub and its
 [marketplace update review](https://github.com/omacom/omarchy-plugin-marketplace/issues/10975)
 is pending. The marketplace's verified `0.1.1` snapshot remains the listed
 version until that update is approved.

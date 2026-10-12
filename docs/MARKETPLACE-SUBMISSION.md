@@ -1,6 +1,6 @@
 # Omarchy marketplace submission and verification
 
-The `0.2.0` alpha is published on GitHub. Its marketplace update is pending in
+The `0.2.1` alpha is published on GitHub. Its marketplace update is pending in
 [`omacom/omarchy-plugin-marketplace#10975`](https://github.com/omacom/omarchy-plugin-marketplace/issues/10975).
 The existing verified listing remains at `0.1.1` until the update is approved.
 This guide records the review boundary and the process for qualifying a newer
@@ -101,6 +101,7 @@ commit as Verified.
 | --- | --- |
 | Omarchy Quattro and its Quickshell modules | Host plugin runtime; native `omarchy plugin validate` is run in CI. |
 | Python 3.11+ with virtual-environment support | Required only after the user selects **Install local runtime** or directly chooses the optional CLI. |
+| Explicit paste | Uses system Python 3, `wl-paste` and GNU `timeout` only after a paste gesture, with fixed arguments, a 2 KiB cap and a two-second total deadline. Missing dependencies leave typing available; no dependency is installed by paste. |
 | Limitless Library | Shipped pure-Python wheel tied to a full public commit and exact digest in `runtime/bundle.json`. |
 | Initial network use | Omarchy clones this repository; explicit runtime setup may fetch only exact hash-approved binary dependencies. Core and adapter wheels are local and install with no index. |
 | Optional managed network use | Begins only after the explicit **Connect to Limitless Library service** action verifies release-pinned trust and the user later chooses a service action. |
@@ -118,7 +119,9 @@ The repository is public. The initial 0.1.0 candidate in
 in-panel build. Version 0.1.1 replaced that path with the verified bundle. Version 0.2.0
 retains that setup boundary and bundles the current core fixes, canonical method
 publication, local fallback, streamlined Library and Agents views, and in-panel
-sharing controls.
+sharing controls. Version 0.2.1 replaces both plugin-owned editors with
+plain TextEdit and bounded explicit paste, and renders labels as plain text.
+See [clipboard implementation and checks](CLIPBOARD-INPUT.md).
 The current update review belongs in
 [#10975](https://github.com/omacom/omarchy-plugin-marketplace/issues/10975).
 

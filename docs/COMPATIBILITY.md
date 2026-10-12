@@ -2,7 +2,7 @@
 
 ## Supported contract
 
-The `0.2.0` alpha adapter targets Omarchy's Quattro plugin contract:
+The `0.2.1` alpha adapter targets Omarchy's Quattro plugin contract:
 
 - plugin manifest schema version 1;
 - a third-party, non-reserved panel and bar-widget identifier;
@@ -12,6 +12,13 @@ The `0.2.0` alpha adapter targets Omarchy's Quattro plugin contract:
 
 Alpha status means interfaces and behavior may change before a stable release.
 The pinned contract and checks below describe the current supported scope.
+
+The plugin-owned objective and optional release editors use plain TextEdit.
+Native typing, selection, Unicode input methods, and undo/redo remain available.
+Explicit clipboard or primary-selection paste requires `wl-clipboard`, GNU
+coreutils, and system Python 3; it does not require the optional Library runtime.
+Missing paste dependencies are reported locally and typing remains available.
+See [clipboard limits and regression checks](CLIPBOARD-INPUT.md).
 
 The contract is pinned in CI to Omarchy Quattro commit
 c352b62d67456f56ca898d0e23effc1b20c25ca6. The live shell at this

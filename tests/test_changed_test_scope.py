@@ -50,7 +50,7 @@ def test_mcp_change_selects_query_and_contribution_contracts() -> None:
 def test_qml_change_selects_plugin_and_visual_contracts() -> None:
     result = plan("plugin/PanelContents.qml")
 
-    assert result["tests"] == ["tests/test_plugin_contract.py"]
+    assert result["tests"] == ["tests/test_objective_input_qt.py", "tests/test_plugin_contract.py"]
     assert result["omarchyContractRequired"] is True
     assert result["visualGateRecommended"] is True
 

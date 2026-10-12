@@ -12,6 +12,11 @@ ShellRoot {
   property string outputDirectory: Quickshell.env("LIMITLESS_VISUAL_OUTPUT")
 
   property var panelState: QtObject {
+    property bool opened: true
+    signal clipboardPasteFinished(string field, string value, int serial, string error)
+    function requestClipboardPaste(_primary, field, serial) {
+      clipboardPasteFinished(field, "", serial, "Paste is unavailable in the visual fixture.")
+    }
     property bool commandRunning: false
     property bool runtimeReady: true
     property string activeSection: "library"

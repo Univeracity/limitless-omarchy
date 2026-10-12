@@ -11,6 +11,8 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path, PurePosixPath
 
 ALL_TESTS = (
+    "tests/test_clipboard.py",
+    "tests/test_objective_input_qt.py",
     "tests/test_adapter.py",
     "tests/test_activity.py",
     "tests/test_agent_connection.py",
@@ -69,6 +71,7 @@ def plan_changes(paths: Iterable[str]) -> dict[str, object]:
             reasons.append("test-scope planner changed")
         elif raw.startswith(("plugin/", "tests/runtime/")):
             tests.add("tests/test_plugin_contract.py")
+            tests.add("tests/test_objective_input_qt.py")
             package_gate = True
             omarchy_contract = True
             visual_gate = path.suffix == ".qml"
@@ -78,6 +81,10 @@ def plan_changes(paths: Iterable[str]) -> dict[str, object]:
             package_gate = True
             omarchy_contract = True
             reasons.append("plugin manifest changed")
+        elif raw == "scripts/read-clipboard.py":
+            tests.update({"tests/test_clipboard.py", "tests/test_plugin_contract.py"})
+            package_gate = True
+            reasons.append("bounded clipboard reader changed")
         elif raw == "scripts/limitless-omarchy-runtime" or raw == "scripts/smoke-omarchy-panel":
             tests.add("tests/test_plugin_contract.py")
             package_gate = True
