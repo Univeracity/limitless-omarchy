@@ -101,6 +101,10 @@ Item {
   property string commandError: ""
   property string operation: ""
   property string pendingInput: ""
+  property string clipboardOutput: ""
+  property int clipboardTicket: 0
+  property string clipboardField: ""
+  signal clipboardPasteFinished(string field, string value, int serial, string error)
   // Third-party manifests no longer expose the host's private __sourceDir.
   // Resolve this file's own directory instead of depending on that field.
   readonly property string pluginRootUrl: String(Qt.resolvedUrl("../"))
@@ -154,6 +158,25 @@ Item {
     pendingInput = ""
     showMethod(null)
     if (command.running) command.running = false
+    if (clipboardReader.running) clipboardReader.running = false
+    clipboardDeadline.stop()
+    clipboardTicket = 0
+    clipboardField = ""
+    clipboardOutput = ""
+  }
+
+  function requestClipboardPaste(primary, field, serial) {
+    if (!opened || command.running || clipboardReader.running) {
+      clipboardPasteFinished(field, "", serial, "Paste is unavailable while another action is running.")
+      return
+    }
+    clipboardTicket = serial
+    clipboardField = field
+    clipboardOutput = ""
+    clipboardReader.command = ["python3", "-I", pluginRoot + "/scripts/read-clipboard.py",
+                               "--selection", primary ? "primary" : "clipboard"]
+    clipboardReader.running = true
+    clipboardDeadline.restart()
   }
 
   function dismiss() {
@@ -749,6 +772,45 @@ Item {
     } else {
       headline = "Start fresh"
       detail = "No eligible local result was selected. No candidate details were disclosed."
+    }
+  }
+
+  Timer {
+    id: clipboardDeadline
+    interval: 2500
+    onTriggered: {
+      var field = root.clipboardField
+      var ticket = root.clipboardTicket
+      root.clipboardTicket = 0
+      root.clipboardField = ""
+      clipboardReader.running = false
+      root.clipboardOutput = ""
+      root.clipboardPasteFinished(field, "", ticket, "Clipboard read timed out.")
+    }
+  }
+
+  Process {
+    id: clipboardReader
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.clipboardOutput = String(text || "")
+    }
+    onExited: function(exitCode) {
+      clipboardReader.running = false
+      clipboardDeadline.stop()
+      var field = root.clipboardField
+      var ticket = root.clipboardTicket
+      root.clipboardTicket = 0
+      root.clipboardField = ""
+      var result = null
+      try { result = JSON.parse(root.clipboardOutput) } catch (e) {}
+      root.clipboardOutput = ""
+      if (!root.opened) return
+      if (exitCode === 0 && result && result.ok === true && typeof result.text === "string")
+        root.clipboardPasteFinished(field, result.text, ticket, "")
+      else
+        root.clipboardPasteFinished(field, "", ticket,
+          result && typeof result.error === "string" ? result.error : "Clipboard read failed.")
     }
   }
 

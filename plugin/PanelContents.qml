@@ -84,6 +84,7 @@ Item {
         spacing: -2
 
         Text {
+          textFormat: Text.PlainText
           text: "    ██"
           color: Qt.lighter(Color.accent, 1.30)
           font.family: Style.font.family
@@ -92,6 +93,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           text: "  ██"
           color: Qt.lighter(Color.accent, 1.16)
           font.family: Style.font.family
@@ -100,6 +102,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           text: "██"
           color: Color.accent
           font.family: Style.font.family
@@ -108,6 +111,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           text: "  ██"
           color: Qt.lighter(Color.accent, 1.16)
           font.family: Style.font.family
@@ -116,6 +120,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           text: "    ██"
           color: Qt.lighter(Color.accent, 1.30)
           font.family: Style.font.family
@@ -186,6 +191,7 @@ Item {
       spacing: 1
 
       Text {
+        textFormat: Text.PlainText
         id: statValue
         text: statTile.loading ? "◒" : statTile.value
         color: statTile.highlighted ? Color.accent : Color.popups.text
@@ -205,6 +211,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         width: parent.width
         text: statTile.label.toUpperCase()
         color: Color.popups.text
@@ -232,6 +239,7 @@ Item {
       spacing: 4
 
       Text {
+        textFormat: Text.PlainText
         text: inlineMetric.label
         color: Color.popups.text
         opacity: 0.58
@@ -240,6 +248,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         id: inlineMetricValue
         width: 18
         horizontalAlignment: Text.AlignHCenter
@@ -346,6 +355,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         visible: root.panel && root.panel.activeSection === "library"
         width: parent.width
         wrapMode: Text.Wrap
@@ -357,6 +367,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         visible: root.panel && root.panel.activeSection === "agents"
         width: parent.width
         wrapMode: Text.Wrap
@@ -368,6 +379,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         visible: root.panel && root.panel.activeSection === "service"
         width: parent.width
         wrapMode: Text.Wrap
@@ -379,6 +391,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         visible: root.panel && root.panel.activeSection === "stats"
         width: parent.width
         wrapMode: Text.Wrap
@@ -390,6 +403,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         visible: root.panel && root.panel.activeSection === "about"
         width: parent.width
         wrapMode: Text.Wrap
@@ -401,6 +415,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         visible: root.panel && root.panel.selectionReference !== ""
         width: parent.width
         elide: Text.ElideRight
@@ -420,6 +435,7 @@ Item {
         radius: Style.cornerRadius
 
         Text {
+          textFormat: Text.PlainText
           id: errorMessage
           anchors.left: parent.left
           anchors.right: parent.right
@@ -538,11 +554,11 @@ Item {
             { label: "Limitations", items: root.panel.methodLimitations }
           ] : []
           delegate: Text {
+            textFormat: Text.PlainText
             required property var modelData
             visible: modelData.items.length > 0
             width: parent.width
             wrapMode: Text.Wrap
-            textFormat: Text.PlainText
             text: modelData.label + "\n" + modelData.items.map(function(item, index) {
               return String(index + 1) + ". " + String(item)
             }).join("\n")
@@ -568,6 +584,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           width: parent.width
           wrapMode: Text.Wrap
           text: root.panel && root.panel.runtimeReady
@@ -587,40 +604,58 @@ Item {
           font.pixelSize: Style.font.bodySmall
         }
 
-        Rectangle {
+        Row {
           visible: root.panel && root.panel.runtimeReady && !root.panel.settingsModalOpen
           width: parent.width
-          height: root.controlHeight
-          radius: Style.cornerRadius
-          color: Color.popups.background
-          border.color: libraryObjectiveInput.activeFocus ? Color.accent : Color.popups.border
-          border.width: 1
+          spacing: 8
 
-          TextInput {
-            id: libraryObjectiveInput
-            activeFocusOnTab: true
-            anchors.fill: parent
-            anchors.leftMargin: 10
-            anchors.rightMargin: 10
-            verticalAlignment: TextInput.AlignVCenter
-            clip: true
-            enabled: !root.commandRunning
-            text: root.panel ? root.panel.serviceObjective : ""
-            color: Color.popups.text
-            font.family: Style.font.family
-            font.pixelSize: Style.font.bodySmall
-            selectByMouse: true
-            onTextEdited: if (root.panel) root.panel.serviceObjective = text
+          Rectangle {
+            width: parent.width - 80
+            height: root.controlHeight
+            radius: Style.cornerRadius
+            color: Color.popups.background
+            border.color: libraryObjectiveInput.activeFocus ? Color.accent : Color.popups.border
+            border.width: 1
 
-            Text {
+            ClipboardTextField {
+              id: libraryObjectiveInput
+              activeFocusOnTab: true
               anchors.fill: parent
-              verticalAlignment: Text.AlignVCenter
-              visible: libraryObjectiveInput.text === ""
-              text: "What are you about to make or change?"
+              anchors.leftMargin: 10
+              anchors.rightMargin: 10
+              clip: true
+              enabled: !root.commandRunning
+              text: root.panel ? root.panel.serviceObjective : ""
               color: Color.popups.text
-              opacity: 0.45
-              font: libraryObjectiveInput.font
+              font.family: Style.font.family
+              font.pixelSize: Style.font.bodySmall
+              placeholderText: "What are you about to make or change?"
+              onEdited: function(value) { if (root.panel) root.panel.serviceObjective = value }
+              onInputRejected: function(message) { if (root.panel) root.panel.errorText = message }
+              onPasteRequested: function(primary, serial) {
+                if (root.panel) root.panel.requestClipboardPaste(primary, "objective", serial)
+                else finishPaste("", serial, "Paste is unavailable.")
+              }
+              Connections {
+                target: root.panel
+                function onClipboardPasteFinished(field, value, serial, error) {
+                  if (field === "objective") libraryObjectiveInput.finishPaste(value, serial, error)
+                }
+                function onOpenedChanged() {
+                  if (root.panel && !root.panel.opened) libraryObjectiveInput.cancelPaste()
+                }
+              }
             }
+          }
+
+          Button {
+            width: 72
+            height: root.controlHeight
+            text: libraryObjectiveInput.pastePending ? "Pasting…" : "Paste"
+            bordered: true
+            focusable: true
+            enabled: !root.commandRunning && !libraryObjectiveInput.pastePending
+            onClicked: libraryObjectiveInput.requestPaste(false)
           }
         }
 
@@ -670,6 +705,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           visible: root.panel && root.panel.runtimeReady && !root.panel.settingsModalOpen
           width: parent.width
           wrapMode: Text.Wrap
@@ -698,6 +734,7 @@ Item {
             spacing: 8
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               text: "SAVE WHAT WORKED"
               color: Color.accent
@@ -708,6 +745,7 @@ Item {
             }
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               wrapMode: Text.Wrap
               text: "After a checked result, save the steps and checks as a method. The next person can adapt it without receiving your source."
@@ -717,6 +755,7 @@ Item {
             }
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               wrapMode: Text.Wrap
               text: root.panel && root.panel.defaultAgentConnected
@@ -760,6 +799,7 @@ Item {
             }
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               wrapMode: Text.Wrap
               text: "A complete source-containing solution needs its own reviewed draft and explicit publication. Method sharing does not upload source."
@@ -789,6 +829,7 @@ Item {
             spacing: 10
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               text: "WHERE NEW METHODS GO"
               color: Color.popups.text
@@ -799,6 +840,7 @@ Item {
             }
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               wrapMode: Text.Wrap
               text: "Methods stay on this device until you choose another destination. Public sharing requires the service policy; team and organization sharing wait for an account."
@@ -835,6 +877,7 @@ Item {
             }
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               text: "WHEN TO SAVE METHODS"
               color: Color.popups.text
@@ -869,6 +912,7 @@ Item {
             }
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               wrapMode: Text.Wrap
               text: root.panel && root.panel.pendingContributionMode === "manual"
@@ -883,6 +927,7 @@ Item {
             }
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               text: "SOURCE REVIEW PREFERENCE"
               color: Color.popups.text
@@ -918,6 +963,7 @@ Item {
             }
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               wrapMode: Text.Wrap
               text: "This records what you may review later. The agent tool registers methods only; complete source needs a separate exact draft and explicit publication."
@@ -928,6 +974,7 @@ Item {
             }
 
             Text {
+              textFormat: Text.PlainText
               visible: root.panel && root.panel.pendingDefaultDestination === "public"
               width: parent.width
               wrapMode: Text.Wrap
@@ -1058,6 +1105,7 @@ Item {
                 spacing: 8
 
                 Text {
+                  textFormat: Text.PlainText
                   width: 328
                   anchors.verticalCenter: parent.verticalCenter
                   text: String(modelData.title || "Registered method")
@@ -1084,6 +1132,7 @@ Item {
               }
 
               Text {
+                textFormat: Text.PlainText
                 width: parent.width
                 text: root.methodStatusLabel(modelData.status) + "  ·  "
                   + root.methodDestinationLabel(modelData.destination) + "  ·  revision "
@@ -1095,6 +1144,7 @@ Item {
               }
 
               Text {
+                textFormat: Text.PlainText
                 visible: root.panel && root.panel.draftManageRef === String(modelData.draftRef)
                 width: parent.width
                 text: "MOVE AVAILABILITY"
@@ -1136,6 +1186,7 @@ Item {
               }
 
               Text {
+                textFormat: Text.PlainText
                 visible: root.panel && root.panel.draftManageRef === String(modelData.draftRef)
                 width: parent.width
                 wrapMode: Text.Wrap
@@ -1164,6 +1215,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           width: parent.width
           wrapMode: Text.Wrap
           text: root.panel ? root.panel.agentSummary : ""
@@ -1252,6 +1304,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           visible: root.panel && root.panel.agentOptionsExpanded
             && root.panel.agentReportNeeded && root.panel.agentReportPath !== ""
           width: parent.width
@@ -1275,6 +1328,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           width: parent.width
           wrapMode: Text.Wrap
           text: "Your Omarchy default is the normal path. Add another agent only when you want Limitless available there too."
@@ -1318,6 +1372,7 @@ Item {
               spacing: 2
 
               Text {
+                textFormat: Text.PlainText
                 width: parent.width
                 text: "Limitless Library"
                 horizontalAlignment: Text.AlignHCenter
@@ -1328,6 +1383,7 @@ Item {
               }
 
               Text {
+                textFormat: Text.PlainText
                 width: parent.width
                 text: "a Univeracity project"
                 horizontalAlignment: Text.AlignHCenter
@@ -1354,6 +1410,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           width: parent.width
           wrapMode: Text.Wrap
           text: "Limitless emerged after seeing agents rebuild good work across repositories, sessions, and teams. Safe reuse requires more than search: trusted checks must ensure prior work is allowed, compatible, unchanged, and actually adopted."
@@ -1371,6 +1428,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           width: parent.width
           wrapMode: Text.Wrap
           text: "As the Limitless Library grows, valuable work compounds across people, tools, and environments. Limitless keeps local control intact while opening a path to permissioned public and shared reuse. Omarchy is where this concept naturally fits: a system built to be owned and reshaped by its user and its community."
@@ -1388,6 +1446,7 @@ Item {
           radius: Style.cornerRadius
 
           Text {
+            textFormat: Text.PlainText
             id: aboutQuip
             anchors.left: parent.left
             anchors.right: parent.right
@@ -1459,6 +1518,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           width: parent.width
           horizontalAlignment: Text.AlignHCenter
           text: "© 2026 Limitless Library · Apache-2.0"
@@ -1643,6 +1703,7 @@ Item {
             }
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               text: root.panel && root.panel.statsServiceConnected
                 ? "Limitless service connected"
@@ -1656,6 +1717,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           width: parent.width
           wrapMode: Text.Wrap
           text: {
@@ -1687,6 +1749,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           width: parent.width
           wrapMode: Text.Wrap
           text: "Only aggregate counters are stored locally—never objectives, prompts, paths, IDs, or result contents. Omarchy and opt-in general-provider activity remain separate in the totals above."
@@ -1711,6 +1774,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           width: parent.width
           wrapMode: Text.Wrap
           text: root.panel && root.panel.serviceUsageExceeded
@@ -1757,6 +1821,7 @@ Item {
             spacing: 8
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               wrapMode: Text.Wrap
               text: root.panel ? root.panel.serviceSummary : ""
@@ -1796,6 +1861,7 @@ Item {
             spacing: 4
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               text: "ANONYMOUS INSTALLATION"
               color: Color.popups.text
@@ -1806,6 +1872,7 @@ Item {
             }
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               wrapMode: Text.Wrap
               text: "Public discovery is connected. History stays on this device unless an account is used to persist it with the service."
@@ -1826,6 +1893,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           visible: root.panel && root.panel.serviceReady
           width: parent.width
           wrapMode: Text.Wrap
@@ -1874,6 +1942,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           visible: root.panel && root.panel.serviceReady && root.panel.draftTotal > 0
           width: parent.width
           wrapMode: Text.Wrap
@@ -1901,6 +1970,7 @@ Item {
         }
 
         Text {
+          textFormat: Text.PlainText
           visible: root.panel && root.panel.serviceDetailsExpanded
           width: parent.width
           wrapMode: Text.Wrap
@@ -1920,28 +1990,33 @@ Item {
           border.color: omarchyReleaseInput.activeFocus ? Color.accent : Color.popups.border
           border.width: 1
 
-          TextInput {
+          ClipboardTextField {
             id: omarchyReleaseInput
             anchors.fill: parent
             anchors.leftMargin: 10
             anchors.rightMargin: 10
-            verticalAlignment: TextInput.AlignVCenter
             clip: true
             text: root.panel ? root.panel.omarchyRelease : ""
             color: Color.popups.text
             font.family: Style.font.family
             font.pixelSize: Style.font.bodySmall
-            selectByMouse: true
-            onTextEdited: if (root.panel) root.panel.omarchyRelease = text
-
-            Text {
-              anchors.fill: parent
-              verticalAlignment: Text.AlignVCenter
-              visible: omarchyReleaseInput.text === ""
-              text: "Omarchy release (optional)"
-              color: Color.popups.text
-              opacity: 0.45
-              font: omarchyReleaseInput.font
+            enabled: !root.commandRunning
+            accessibleName: "Omarchy release"
+            placeholderText: "Omarchy release (optional)"
+            onEdited: function(value) { if (root.panel) root.panel.omarchyRelease = value }
+            onInputRejected: function(message) { if (root.panel) root.panel.errorText = message }
+            onPasteRequested: function(primary, serial) {
+              if (root.panel) root.panel.requestClipboardPaste(primary, "release", serial)
+              else finishPaste("", serial, "Paste is unavailable.")
+            }
+            Connections {
+              target: root.panel
+              function onClipboardPasteFinished(field, value, serial, error) {
+                if (field === "release") omarchyReleaseInput.finishPaste(value, serial, error)
+              }
+              function onOpenedChanged() {
+                if (root.panel && !root.panel.opened) omarchyReleaseInput.cancelPaste()
+              }
             }
           }
         }

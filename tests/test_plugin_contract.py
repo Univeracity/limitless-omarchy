@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -106,7 +107,7 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "PanelContents" in panel
     assert "Flickable" in contents
     assert "implicitHeight: 680" in contents
-    assert "TextInput" in contents
+    assert "ClipboardTextField" in contents
     assert 'text: "Library"' in contents
     assert 'text: "Agents"' in contents
     assert 'text: "Service"' in contents
@@ -193,6 +194,14 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "method.summary" in panel
     assert "service-not-configured" not in panel
     assert "omarchy plugin enable" not in panel
+
+
+def test_all_plugin_input_and_text_surfaces_avoid_implicit_foreign_payload_reads() -> None:
+    for path in (ROOT / "plugin").glob("*.qml"):
+        source = path.read_text(encoding="utf-8")
+        assert not re.search(r"\b(?:TextInput|TextField|TextArea)\s*\{", source), path
+        for match in re.finditer(r"\bText\s*\{", source):
+            assert source[match.end() :].lstrip().startswith("textFormat: Text.PlainText"), path
 
 
 def test_bar_widget_opens_the_panel_through_omarchy() -> None:
@@ -297,7 +306,7 @@ printf '%s\n' "$*" >>"$PIP_CALL_LOG"
     assert str(ROOT / "runtime" / "requirements.lock") in calls[0]
     assert "--no-index --no-deps --force-reinstall" in calls[1]
     assert str(ROOT / "runtime" / "wheels" / "limitless_library-0.1.0a1-py3-none-any.whl") in calls[1]
-    assert str(ROOT / "runtime" / "wheels" / "limitless_omarchy-0.2.0-py3-none-any.whl") in calls[1]
+    assert str(ROOT / "runtime" / "wheels" / "limitless_omarchy-0.2.1-py3-none-any.whl") in calls[1]
     assert json.loads(completed.stdout)["status"] == "configured"
     receipt = data_home / "limitless-omarchy" / "installed-bundle.json"
     assert receipt.read_bytes() == (ROOT / "runtime" / "bundle.json").read_bytes()

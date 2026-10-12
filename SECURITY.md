@@ -2,13 +2,20 @@
 
 ## Scope
 
-The current published plugin is `0.2.0` alpha, with the `0.1.0a1` alpha core.
+The current published plugin is `0.2.1` alpha, with the `0.1.0a1` alpha core.
 Security fixes target this release and `main`; alpha status does not provide
 security or interface stability guarantees.
 
 This repository contains an Omarchy shell plugin and a local Python companion
 CLI. Omarchy plugins execute as unsandboxed code within a long-lived desktop
 shell, so review this repository before enabling it.
+
+Plugin-owned editors use plain TextEdit to avoid TextInput's automatic foreign
+clipboard payload reads. Explicit paste runs outside the shared shell through
+a fixed-argument reader with a 2 KiB cap, a two-second total deadline, inherited
+memory/CPU limits, and an independent deadline that survives controller
+termination. Catalog, status, and error text render as plain text, without
+interpreting remote markup. See [input validation](docs/CLIPBOARD-INPUT.md).
 
 The adapter intentionally does not claim that a validated component or a
 successful local adoption is safe from arbitrary-code behavior. It establishes

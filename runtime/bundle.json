@@ -17,12 +17,12 @@
     },
     {
       "name": "limitless-omarchy",
-      "version": "0.2.0",
-      "path": "runtime/wheels/limitless_omarchy-0.2.0-py3-none-any.whl",
-      "sha256": "cf3d8c90e05d173baf0c4b89626741f5283fb6bb2b566075ff9b10d1c1759d8a",
+      "version": "0.2.1",
+      "path": "runtime/wheels/limitless_omarchy-0.2.1-py3-none-any.whl",
+      "sha256": "0a9b19cab1a9de865da8e24b94beb7aabc92b80eb35b5ab34f65269c27470380",
       "source": {
         "repository": "https://github.com/Univeracity/limitless-omarchy",
-        "release": "0.2.0"
+        "release": "0.2.1"
       }
     }
   ],
