@@ -29,6 +29,7 @@ Actions:
   setup       explicitly create or update the isolated local runtime
   query       query the owner-local catalog before an Omarchy customization
   check       check reusable work under saved local-first search consent
+  record-outcome retain a private reuse observation from bounded JSON stdin
   query-policy-show inspect saved agent search consent
   query-policy-apply save agent search consent from bounded JSON stdin
   agent-status show the current Omarchy default and local MCP connection state
@@ -96,7 +97,7 @@ while (($#)); do
 done
 
 case "$action" in
-  status|panel-state|panel-overview|setup|query|check|query-policy-show|query-policy-apply|agent-status|agent-reconcile|agent-disconnect|stats|settings-show|settings-apply|draft-list|register-method|contribution-sync|contribution-transition|service-activate|service-inspect|service-query|service-publication|service-artifact-stage|service-artifact-review|service-artifact-install|service-artifact-enable) ;;
+  status|panel-state|panel-overview|setup|query|check|record-outcome|query-policy-show|query-policy-apply|agent-status|agent-reconcile|agent-disconnect|stats|settings-show|settings-apply|draft-list|register-method|contribution-sync|contribution-transition|service-activate|service-inspect|service-query|service-publication|service-artifact-stage|service-artifact-review|service-artifact-install|service-artifact-enable) ;;
   *)
     fail "unrecognized action: $action"
     ;;
@@ -251,6 +252,10 @@ case "$action" in
     runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
     exec "$runtime_cli" check --catalog "$catalog_root" --settings-path "$settings_path" \
       --drafts-path "$drafts_path" --query-state "$runtime_root/queries" --activity-path "$activity_path"
+    ;;
+  record-outcome)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    exec "$runtime_cli" record-outcome --query-state "$runtime_root/queries"
     ;;
   query-policy-show|query-policy-apply)
     runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }

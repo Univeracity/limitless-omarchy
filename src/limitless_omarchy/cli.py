@@ -12,6 +12,7 @@ from typing import Any
 from limitless_library.catalog import CatalogError
 from limitless_library.contracts import strict_json_loads
 from limitless_library.method_capture import MethodCaptureError
+from limitless_library.method_feedback import MethodFeedbackError, record_method_feedback
 from limitless_library.objective_query import ObjectiveQueryError
 from limitless_library.query_policy import QueryPolicyError
 
@@ -309,6 +310,9 @@ def _parser() -> argparse.ArgumentParser:
     check.add_argument("--omarchy-release")
     _activity_argument(check)
 
+    outcome = subparsers.add_parser("record-outcome", help="keep a private reuse observation from bounded stdin")
+    outcome.add_argument("--query-state", type=Path, required=True)
+
     for command in ("query-policy-show", "query-policy-apply"):
         policy = subparsers.add_parser(command, help="inspect or save separate agent service-search consent")
         policy.add_argument("--settings-path", type=Path, required=True)
@@ -502,6 +506,8 @@ def main() -> None:
             )
             record_query(args.activity_path, result, channel=channel)
             _print(result)
+        elif args.command == "record-outcome":
+            _print(record_method_feedback(args.query_state, _bounded_json_input("reuse outcome")))
         elif args.command == "query-policy-show":
             _print(query_policy_result(args.settings_path))
         elif args.command == "query-policy-apply":
@@ -649,6 +655,7 @@ def main() -> None:
         ObjectiveQueryError,
         QueryPolicyError,
         MethodCaptureError,
+        MethodFeedbackError,
         CatalogError,
     ) as error:
         print(f"limitless-omarchy: {error}", file=sys.stderr)

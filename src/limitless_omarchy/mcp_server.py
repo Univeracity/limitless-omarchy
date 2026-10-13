@@ -13,8 +13,16 @@ from limitless_library.catalog import CatalogError, LocalCatalog
 from limitless_library.contracts import strict_json_loads
 from limitless_library.mcp_compat import LibraryToolDispatcher
 from limitless_library.mcp_protocol import McpToolCallError, McpToolDispatcher, McpToolSession, jsonrpc_error
-from limitless_library.mcp_server import OBJECTIVE_INSTRUCTIONS, OBJECTIVE_TOOL_NAME, objective_tool
+from limitless_library.mcp_server import (
+    FEEDBACK_INSTRUCTIONS,
+    FEEDBACK_TOOL_NAME,
+    OBJECTIVE_INSTRUCTIONS,
+    OBJECTIVE_TOOL_NAME,
+    feedback_tool,
+    objective_tool,
+)
 from limitless_library.mcp_server import TOOL_NAME as GENERAL_TOOL_NAME
+from limitless_library.method_feedback import MethodFeedbackError, record_method_feedback
 from limitless_library.objective_query import ObjectiveQueryEngine, ObjectiveQueryError
 from limitless_library.schemas import load_schema
 
@@ -230,6 +238,11 @@ def _dispatcher(
     objective_engine: ObjectiveQueryEngine | None = None,
 ) -> McpToolDispatcher:
     def call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        if name == FEEDBACK_TOOL_NAME and objective_engine is not None and objective_engine.state_dir is not None:
+            try:
+                return record_method_feedback(objective_engine.state_dir, arguments)
+            except (MethodFeedbackError, OSError, ValueError) as error:
+                raise McpToolCallError(str(error)) from error
         if name == OBJECTIVE_TOOL_NAME and objective_engine is not None:
             try:
                 result = objective_engine.check(arguments)
@@ -295,10 +308,14 @@ def _dispatcher(
     tools = [_general_tool(), _tool(), _register_method_tool()]
     if objective_engine is not None:
         tools.append(objective_tool(service_queries=True))
+        if objective_engine.state_dir is not None:
+            tools.append(feedback_tool())
     return LibraryToolDispatcher(
         server_name=SERVER_NAME,
         server_version=SERVER_VERSION,
-        instructions=_instructions(settings_path) + (OBJECTIVE_INSTRUCTIONS if objective_engine is not None else ""),
+        instructions=_instructions(settings_path)
+        + (OBJECTIVE_INSTRUCTIONS if objective_engine is not None else "")
+        + (FEEDBACK_INSTRUCTIONS if objective_engine is not None and objective_engine.state_dir is not None else ""),
         tools=tools,
         call_tool=call_tool,
         cache_scope="private",

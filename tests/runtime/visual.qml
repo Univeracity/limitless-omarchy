@@ -24,6 +24,7 @@ ShellRoot {
     property bool settingsLoaded: true
     property bool queryPolicyLoaded: true
     property string queryExecutionMode: "local"
+    property string queryReference: ""
     property string settingsDefaultDestination: "local"
     property string settingsContributionMode: "agent-mediated"
     property string settingsMaterialPolicy: "methods-only"
@@ -141,6 +142,7 @@ ShellRoot {
     function refreshStats() {}
     function queryCatalog() {}
     function checkLibrary() {}
+    function recordOutcome(_succeeded) {}
     function setPublicSearch(enabled) { queryExecutionMode = enabled ? "service" : "local" }
     function activateService() {}
     function inspectService() {}

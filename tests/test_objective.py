@@ -246,10 +246,21 @@ def test_real_native_stdio_session_registers_then_checks_and_keeps_legacy_tools(
         "omarchy_query_before_customization",
         "limitless_register_method",
         "limitless_check",
+        "limitless_record_outcome",
     }
     assert responses[3]["result"]["structuredContent"]["status"] == "registered"
     assert responses[4]["result"]["structuredContent"]["treatment"] == "source-free-method"
     assert load_query_policy(owner_query_policy_path(settings))["executionMode"] == "local"
+    feedback = run_cli(
+        ["record-outcome", "--query-state", str(tmp_path / "queries")],
+        {
+            "queryRef": responses[4]["result"]["structuredContent"]["queryRef"],
+            "status": "blocked",
+            "reasonCode": "missing-capability",
+            "note": "Required capability unavailable.",
+        },
+    )
+    assert feedback["assurance"] == "self-reported" and feedback["destination"] == "private"
 
 
 def run_cli(arguments: list[str], payload: dict | None = None):

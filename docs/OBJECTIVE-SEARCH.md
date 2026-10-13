@@ -47,3 +47,16 @@ contract, rather than a second Omarchy policy implementation.
 Qualification still requires coordinated candidate bundles, installed-client
 continuity, native rendering, and actual receiver reuse. Source-level tests
 alone do not establish release readiness.
+
+The core now also owns immutable native draft registration and revisions.
+Omarchy supplies its original compatibility projection and sharing initializer;
+record schemas, ULID identities, signed publication state, and old result fields
+stay intact. Retrying a successful revision preserves its ID. Interrupted
+projection retirement can be completed without rewriting its records.
+
+After applying and checking a selected method, the panel can keep **Worked
+after checking** or **Needs adaptation** as private self-reported feedback.
+Connected agents use the same core `limitless_record_outcome` tool. Reports bind
+to the content and receiver in the private continuation, never publish notes,
+and never increment verified-adoption claims. The old registration and sharing
+interfaces remain available.

@@ -569,6 +569,27 @@ Item {
         }
       }
 
+      Row {
+        visible: root.panel && root.panel.activeSection === "library" && root.panel.queryReference !== ""
+          && root.panel.disposition === "source-free-method" && !root.panel.settingsModalOpen
+        width: parent.width
+        spacing: 8
+        Button {
+          width: 216; height: root.controlHeight
+          text: "Worked after checking"
+          bordered: true; focusable: true
+          enabled: !root.commandRunning
+          onClicked: if (root.panel) root.panel.recordOutcome(true)
+        }
+        Button {
+          width: 216; height: root.controlHeight
+          text: "Needs adaptation"
+          bordered: true; focusable: true
+          enabled: !root.commandRunning
+          onClicked: if (root.panel) root.panel.recordOutcome(false)
+        }
+      }
+
       Column {
         visible: root.panel && root.panel.activeSection === "library"
         width: parent.width

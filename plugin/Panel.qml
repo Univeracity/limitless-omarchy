@@ -94,6 +94,7 @@ Item {
   property string detail: "Check for reusable work before you build. Keep useful methods for the next person."
   property string disposition: "status"
   property string selectionReference: ""
+  property string queryReference: ""
   property var methodSteps: []
   property var methodChecks: []
   property var methodConstraints: []
@@ -116,6 +117,7 @@ Item {
 
   function open(payloadJson) {
     showMethod(null)
+    queryReference = ""
     var payload = {}
     try { payload = JSON.parse(payloadJson || "{}") || {} } catch (e) {}
     if (payload.omarchyRelease !== undefined) omarchyRelease = String(payload.omarchyRelease)
@@ -156,6 +158,7 @@ Item {
 
   function close() {
     opened = false
+    queryReference = ""
     serviceObjective = ""
     pendingInput = ""
     showMethod(null)
@@ -206,6 +209,19 @@ Item {
     var arguments = []
     if (omarchyRelease.trim() !== "") arguments = ["--omarchy-release", omarchyRelease.trim()]
     runRuntime("check", arguments, JSON.stringify({objective: serviceObjective.trim()}))
+  }
+
+  function recordOutcome(succeeded) {
+    if (!/^query:[0-9a-f]{32}$/.test(queryReference)) {
+      errorText = "Check reusable work before recording its outcome."
+      return
+    }
+    runRuntime("record-outcome", [], JSON.stringify({
+      queryRef: queryReference,
+      status: succeeded ? "succeeded" : "failed",
+      reasonCode: succeeded ? "checks-passed" : "adaptation-needed",
+      note: ""
+    }))
   }
 
   function showMethod(method) {
@@ -459,7 +475,10 @@ Item {
 
   function runRuntime(nextOperation, arguments, stdinPayload) {
     if (command.running) return
-    if (nextOperation === "query" || nextOperation === "service-query" || nextOperation === "check") showMethod(null)
+    if (nextOperation === "query" || nextOperation === "service-query" || nextOperation === "check") {
+      showMethod(null)
+      queryReference = ""
+    }
     if (nextOperation === "check") {
       serviceArtifactStageAvailable = false
       serviceArtifactReviewAvailable = false
@@ -566,6 +585,7 @@ Item {
       runtimeReady = true
       disposition = String(value.treatment || "abstain")
       var selection = value.selection || null
+      queryReference = selection ? String(value.queryRef || "") : ""
       var coverage = value.coverage || {}
       selectionReference = selection ? String(selection.title || selection.reference || "") : ""
       if (disposition === "source-free-method") {
@@ -583,6 +603,11 @@ Item {
           ? "Some reusable work could not be checked safely. No match was fabricated; you can still work locally."
           : "No suitable work was selected. Start fresh, then keep a useful method for the next person."
       }
+      return
+    }
+    if (value.schemaVersion === "limitless.method-feedback-result/1.0") {
+      headline = "Outcome kept privately"
+      detail = "This is your report of use, not an independent verification or a publication. Failure notes help the next revision."
       return
     }
     if (value.schemaVersion === "limitless.omarchy-status/0.1") {
