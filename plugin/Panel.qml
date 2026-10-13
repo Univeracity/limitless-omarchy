@@ -17,6 +17,8 @@ Item {
   property string activeSection: "library"
   property bool settingsModalOpen: false
   property bool settingsLoaded: false
+  property bool queryPolicyLoaded: false
+  property string queryExecutionMode: "local"
   property string settingsDefaultDestination: "local"
   property string settingsContributionMode: "agent-mediated"
   property string settingsMaterialPolicy: "methods-only"
@@ -186,7 +188,24 @@ Item {
   }
 
   function refresh() {
-    runRuntime("panel-state", [])
+    runRuntime("panel-overview", [])
+  }
+
+  function setPublicSearch(enabled) {
+    runRuntime("query-policy-apply", [], JSON.stringify({
+      schemaVersion: "limitless.omarchy-query-policy-input/1.0",
+      executionMode: enabled ? "service" : "local"
+    }))
+  }
+
+  function checkLibrary() {
+    if (serviceObjective.trim() === "") {
+      errorText = "Describe the work you want a better starting point for."
+      return
+    }
+    var arguments = []
+    if (omarchyRelease.trim() !== "") arguments = ["--omarchy-release", omarchyRelease.trim()]
+    runRuntime("check", arguments, JSON.stringify({objective: serviceObjective.trim()}))
   }
 
   function showMethod(method) {
@@ -440,7 +459,15 @@ Item {
 
   function runRuntime(nextOperation, arguments, stdinPayload) {
     if (command.running) return
-    if (nextOperation === "query" || nextOperation === "service-query") showMethod(null)
+    if (nextOperation === "query" || nextOperation === "service-query" || nextOperation === "check") showMethod(null)
+    if (nextOperation === "check") {
+      serviceArtifactStageAvailable = false
+      serviceArtifactReviewAvailable = false
+      serviceArtifactInstallAvailable = false
+      serviceArtifactEnableAvailable = false
+      serviceArtifactHandoffStatePath = ""
+      serviceArtifactInstallationStatePath = ""
+    }
     errorText = ""
     commandOutput = ""
     commandError = ""
@@ -503,6 +530,17 @@ Item {
       }
       return
     }
+    if (value.schemaVersion === "limitless.omarchy-query-policy-result/1.0") {
+      queryExecutionMode = String(value.executionMode || "local")
+      queryPolicyLoaded = true
+      if (value.saved === true) {
+        headline = "Search preference saved"
+        detail = queryExecutionMode === "service"
+          ? "You and connected agents check this device first. Concise objectives may go to the public Library when local work does not fit. Sharing remains separately controlled."
+          : "You and connected agents search this device only. Sharing preferences are unchanged."
+      }
+      return
+    }
     if (value.schemaVersion === "limitless.omarchy-draft-list/0.1") {
       draftItems = Array.isArray(value.items) ? value.items : []
       draftTotal = Number(value.total || 0)
@@ -515,12 +553,36 @@ Item {
         + ". Transfer and withdrawal work continues safely in the background."
       return
     }
-    if (value.schemaVersion === "limitless.omarchy-panel-state/0.1") {
+    if (value.schemaVersion === "limitless.omarchy-panel-state/0.1" || value.schemaVersion === "limitless.omarchy-panel-state/0.2") {
       if (value.status) applyResult(JSON.stringify(value.status))
       if (value.settings) applyResult(JSON.stringify(value.settings))
       if (value.drafts) applyResult(JSON.stringify(value.drafts))
       if (value.agents) applyResult(JSON.stringify(value.agents))
       if (value.stats) applyResult(JSON.stringify(value.stats))
+      if (value.queryPolicy) applyResult(JSON.stringify(value.queryPolicy))
+      return
+    }
+    if (value.schemaVersion === "limitless.objective-result/1.0") {
+      runtimeReady = true
+      disposition = String(value.treatment || "abstain")
+      var selection = value.selection || null
+      var coverage = value.coverage || {}
+      selectionReference = selection ? String(selection.title || selection.reference || "") : ""
+      if (disposition === "source-free-method") {
+        showMethod(selection ? selection.method : null)
+        headline = coverage.local === "partial" ? "A starting point · search incomplete" : "A reusable starting point"
+        detail = "Apply this " + (value.origin === "service" ? "shared" : "local")
+          + " method and check the result in your environment. Delivery does not establish successful use."
+      } else if (disposition === "exact-component") {
+        headline = "Component selected for review"
+        detail = "Receiver verification is required before adoption. This check has not fetched, installed, or executed anything."
+      } else {
+        var incomplete = coverage.local === "partial" || ["unavailable", "verification-failed", "policy-attention"].indexOf(String(coverage.service || "")) >= 0
+        headline = incomplete ? "Search incomplete" : "Start fresh"
+        detail = incomplete
+          ? "Some reusable work could not be checked safely. No match was fabricated; you can still work locally."
+          : "No suitable work was selected. Start fresh, then keep a useful method for the next person."
+      }
       return
     }
     if (value.schemaVersion === "limitless.omarchy-status/0.1") {
@@ -850,6 +912,8 @@ Item {
       if (completedOperation === "setup")
         Qt.callLater(function() { if (root.opened) root.refresh() })
       else if (completedOperation === "panel-state" && root.runtimeReady)
+        Qt.callLater(function() { if (root.opened) root.inspectService() })
+      else if (completedOperation === "panel-overview" && root.runtimeReady)
         Qt.callLater(function() { if (root.opened) root.inspectService() })
       else if (completedOperation === "settings-apply")
         Qt.callLater(function() { if (root.opened && root.runtimeReady) root.refreshDrafts() })

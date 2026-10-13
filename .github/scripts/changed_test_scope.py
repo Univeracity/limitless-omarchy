@@ -13,12 +13,14 @@ from pathlib import Path, PurePosixPath
 ALL_TESTS = (
     "tests/test_clipboard.py",
     "tests/test_objective_input_qt.py",
+    "tests/test_objective.py",
     "tests/test_adapter.py",
     "tests/test_activity.py",
     "tests/test_agent_connection.py",
     "tests/test_changed_test_scope.py",
     "tests/test_contributions.py",
     "tests/test_plugin_contract.py",
+    "tests/test_runtime_update.py",
 )
 DOC_PREFIXES = ("docs/",)
 FULL_PATHS = {
@@ -108,12 +110,17 @@ def plan_changes(paths: Iterable[str]) -> dict[str, object]:
             "src/limitless_omarchy/settings.py",
         }:
             tests.add("tests/test_contributions.py")
+            tests.add("tests/test_objective.py")
             package_gate = True
             reasons.append(f"method contribution lifecycle changed: {raw}")
         elif raw == "src/limitless_omarchy/mcp_server.py":
-            tests.update({"tests/test_adapter.py", "tests/test_contributions.py"})
+            tests.update({"tests/test_adapter.py", "tests/test_contributions.py", "tests/test_objective.py"})
             package_gate = True
             reasons.append("Omarchy-aware MCP surface changed")
+        elif raw in {"src/limitless_omarchy/objective.py", "src/limitless_omarchy/cli.py"}:
+            tests.update({"tests/test_adapter.py", "tests/test_objective.py"})
+            package_gate = True
+            reasons.append(f"shared objective host configuration changed: {raw}")
         elif raw.startswith("src/limitless_omarchy/") and path.suffix == ".py":
             tests.add("tests/test_adapter.py")
             package_gate = True

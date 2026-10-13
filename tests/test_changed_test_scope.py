@@ -37,14 +37,14 @@ def test_contribution_change_selects_its_focused_tests() -> None:
     result = plan("src/limitless_omarchy/contributions.py")
 
     assert result["mode"] == "targeted"
-    assert result["tests"] == ["tests/test_contributions.py"]
+    assert result["tests"] == ["tests/test_contributions.py", "tests/test_objective.py"]
     assert result["packageGateRequired"] is True
 
 
 def test_mcp_change_selects_query_and_contribution_contracts() -> None:
     result = plan("src/limitless_omarchy/mcp_server.py")
 
-    assert result["tests"] == ["tests/test_adapter.py", "tests/test_contributions.py"]
+    assert result["tests"] == ["tests/test_adapter.py", "tests/test_contributions.py", "tests/test_objective.py"]
 
 
 def test_qml_change_selects_plugin_and_visual_contracts() -> None:

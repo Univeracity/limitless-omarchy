@@ -9,7 +9,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from limitless_library.catalog import CatalogError
 from limitless_library.contracts import strict_json_loads
+from limitless_library.method_capture import MethodCaptureError
+from limitless_library.objective_query import ObjectiveQueryError
+from limitless_library.query_policy import QueryPolicyError
 
 from .activity import activity_summary, record_agents, record_lifecycle, record_query, record_service
 from .adapter import AdapterError, query_local_catalog, seal_local_capsule, status, validate_plugin
@@ -27,6 +31,7 @@ from .contributions import (
 )
 from .drafts import DraftError, list_drafts, register_method
 from .mcp_server import serve
+from .objective import objective_engine, query_policy_result
 from .provider import serve_general_provider
 from .service import (
     activate_managed_service,
@@ -278,12 +283,13 @@ def _parser() -> argparse.ArgumentParser:
 
     status_parser = subparsers.add_parser("status", help="show the minimal local Omarchy receiver profile")
     status_parser.add_argument("--omarchy-release", help="explicit receiver release for compatibility matching")
-    panel_state = subparsers.add_parser("panel-state", help="load the complete local panel projection in one process")
-    panel_state.add_argument("--state-dir", type=Path, required=True)
-    panel_state.add_argument("--settings-path", type=Path, required=True)
-    panel_state.add_argument("--drafts-path", type=Path, required=True)
-    panel_state.add_argument("--activity-path", type=Path, required=True)
-    panel_state.add_argument("--omarchy-release")
+    for command in ("panel-state", "panel-overview"):
+        panel_state = subparsers.add_parser(command, help="load the complete local panel projection in one process")
+        panel_state.add_argument("--state-dir", type=Path, required=True)
+        panel_state.add_argument("--settings-path", type=Path, required=True)
+        panel_state.add_argument("--drafts-path", type=Path, required=True)
+        panel_state.add_argument("--activity-path", type=Path, required=True)
+        panel_state.add_argument("--omarchy-release")
 
     query = subparsers.add_parser("query", help="query a local catalog before a customization")
     query.add_argument("--catalog", type=Path, required=True)
@@ -292,6 +298,20 @@ def _parser() -> argparse.ArgumentParser:
     query.add_argument("--requested-use", choices=["adopt", "instantiate"], default="adopt")
     query.add_argument("--tenant-scope", choices=["private"], default="private")
     _activity_argument(query)
+
+    check = subparsers.add_parser("check", help="check local reusable work and optionally the authorized service")
+    check.add_argument("--catalog", type=Path, required=True)
+    check.add_argument("--settings-path", type=Path)
+    check.add_argument("--drafts-path", type=Path)
+    check.add_argument("--query-policy", type=Path)
+    check.add_argument("--query-state", type=Path)
+    check.add_argument("--method-store", type=Path)
+    check.add_argument("--omarchy-release")
+    _activity_argument(check)
+
+    for command in ("query-policy-show", "query-policy-apply"):
+        policy = subparsers.add_parser(command, help="inspect or save separate agent service-search consent")
+        policy.add_argument("--settings-path", type=Path, required=True)
 
     seal = subparsers.add_parser("seal-capsule", help="seal an owner-provided local Work Capsule draft")
     seal.add_argument("--draft", type=Path, required=True)
@@ -307,6 +327,9 @@ def _parser() -> argparse.ArgumentParser:
     _activity_argument(mcp)
     mcp.add_argument("--settings-path", type=Path)
     mcp.add_argument("--drafts-path", type=Path)
+    mcp.add_argument("--query-policy", type=Path)
+    mcp.add_argument("--query-state", type=Path)
+    mcp.add_argument("--method-store", type=Path)
 
     provider = subparsers.add_parser(
         "provider",
@@ -431,16 +454,23 @@ def main() -> None:
     try:
         if args.command == "status":
             _print(status(omarchy_release=args.omarchy_release))
-        elif args.command == "panel-state":
+        elif args.command in {"panel-state", "panel-overview"}:
             schedule_contribution_sync(args.drafts_path, activity_path=args.activity_path)
             _print(
                 {
-                    "schemaVersion": "limitless.omarchy-panel-state/0.1",
+                    "schemaVersion": "limitless.omarchy-panel-state/0.2"
+                    if args.command == "panel-overview"
+                    else "limitless.omarchy-panel-state/0.1",
                     "status": status(omarchy_release=args.omarchy_release),
                     "settings": settings_result(load_settings(args.settings_path), saved=False),
                     "drafts": list_drafts(args.drafts_path),
                     "agents": agent_connection_status(args.state_dir),
                     "stats": activity_summary(args.activity_path),
+                    **(
+                        {"queryPolicy": query_policy_result(args.settings_path)}
+                        if args.command == "panel-overview"
+                        else {}
+                    ),
                 }
             )
         elif args.command == "query":
@@ -454,6 +484,36 @@ def main() -> None:
             )
             record_query(args.activity_path, result, channel="local")
             _print(result)
+        elif args.command == "check":
+            engine = objective_engine(
+                args.catalog,
+                settings_path=args.settings_path,
+                drafts_path=args.drafts_path,
+                query_policy_path=args.query_policy,
+                query_state=args.query_state,
+                method_store=args.method_store,
+                omarchy_release=args.omarchy_release,
+            )
+            result = engine.check(_bounded_json_input("objective query"))
+            channel = (
+                "service"
+                if result["coverage"]["service"] in {"complete", "unavailable", "verification-failed"}
+                else "general"
+            )
+            record_query(args.activity_path, result, channel=channel)
+            _print(result)
+        elif args.command == "query-policy-show":
+            _print(query_policy_result(args.settings_path))
+        elif args.command == "query-policy-apply":
+            value = _bounded_json_input("agent search policy")
+            if (
+                not isinstance(value, dict)
+                or set(value) != {"schemaVersion", "executionMode"}
+                or value["schemaVersion"] != "limitless.omarchy-query-policy-input/1.0"
+                or value["executionMode"] not in {"local", "service"}
+            ):
+                raise AdapterError("agent search policy has an unsupported shape")
+            _print(query_policy_result(args.settings_path, execution_mode=value["executionMode"]))
         elif args.command == "seal-capsule":
             _print(seal_local_capsule(args.draft, args.output, root=args.root))
         elif args.command == "validate-plugin":
@@ -468,6 +528,9 @@ def main() -> None:
                 activity_path=args.activity_path,
                 settings_path=args.settings_path,
                 drafts_path=args.drafts_path,
+                query_policy_path=args.query_policy,
+                query_state=args.query_state,
+                method_store=args.method_store,
             )
         elif args.command == "provider":
             serve_general_provider(args.catalog, activity_path=args.activity_path)
@@ -577,7 +640,17 @@ def main() -> None:
             if result["status"] in {"queued", "withdrawal-queued"}:
                 schedule_contribution_sync(args.drafts_path, activity_path=args.activity_path)
             _print(result)
-    except (AdapterError, AgentConnectionError, ContributionError, DraftError, SettingsError) as error:
+    except (
+        AdapterError,
+        AgentConnectionError,
+        ContributionError,
+        DraftError,
+        SettingsError,
+        ObjectiveQueryError,
+        QueryPolicyError,
+        MethodCaptureError,
+        CatalogError,
+    ) as error:
         print(f"limitless-omarchy: {error}", file=sys.stderr)
         raise SystemExit(2) from error
 

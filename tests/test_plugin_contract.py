@@ -168,6 +168,7 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "Local reuse is available. Checking service discovery." in contents
     assert "Limitless finds reusable work for your task." in contents
     assert "Inspect trust boundary" in contents
+    assert "Check reusable work" in contents
     assert "Check public Library" in contents
     assert "Prepare verified plugin review" in contents
     assert "Install reviewed plugin disabled" in contents

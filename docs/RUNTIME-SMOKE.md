@@ -6,7 +6,7 @@ installing, and explicitly enabling the plugin.
 1. Open the **Limitless Library** bar button.
 2. Select **Install local runtime** and wait for the panel to say "Local
    Library ready." This creates only its XDG-scoped runtime.
-3. Enter a short customization objective and select **Check this device**.
+3. Enter a short work objective and select **Check reusable work**.
 
 Confirm all of the following manually:
 
@@ -28,6 +28,11 @@ Confirm all of the following manually:
    optional general Limitless queries, and a query increments the expected
    aggregate result class without exposing its objective or catalog path.
 10. The **?** affordance opens the About surface, its official links require an explicit click, and no link opens merely by viewing the section.
+11. Public search is off initially. **Include public Library when needed**
+    explicitly saves the preference for both the panel and connected agents.
+    A local match skips public search; turning the preference off takes effect
+    on the next query, including an already-running agent connection. Sharing
+    preferences and previously signed contributions remain separate.
 
 If the installed release includes official service trust material, also confirm:
 

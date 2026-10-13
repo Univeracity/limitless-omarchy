@@ -25,8 +25,12 @@ Usage: limitless-omarchy-runtime ACTION --plugin-root PATH [--profile PATH] [--o
 Actions:
   status      report whether the panel-owned local runtime is available
   panel-state load the complete local panel projection in one process
+  panel-overview load the current panel projection with separate search consent
   setup       explicitly create or update the isolated local runtime
   query       query the owner-local catalog before an Omarchy customization
+  check       check reusable work under saved local-first search consent
+  query-policy-show inspect saved agent search consent
+  query-policy-apply save agent search consent from bounded JSON stdin
   agent-status show the current Omarchy default and local MCP connection state
   agent-reconcile connect the default agent and selected additional agents to local MCP
   agent-disconnect remove only plugin-owned local MCP connections
@@ -92,7 +96,7 @@ while (($#)); do
 done
 
 case "$action" in
-  status|panel-state|setup|query|agent-status|agent-reconcile|agent-disconnect|stats|settings-show|settings-apply|draft-list|register-method|contribution-sync|contribution-transition|service-activate|service-inspect|service-query|service-publication|service-artifact-stage|service-artifact-review|service-artifact-install|service-artifact-enable) ;;
+  status|panel-state|panel-overview|setup|query|check|query-policy-show|query-policy-apply|agent-status|agent-reconcile|agent-disconnect|stats|settings-show|settings-apply|draft-list|register-method|contribution-sync|contribution-transition|service-activate|service-inspect|service-query|service-publication|service-artifact-stage|service-artifact-review|service-artifact-install|service-artifact-enable) ;;
   *)
     fail "unrecognized action: $action"
     ;;
@@ -219,9 +223,9 @@ case "$action" in
     fi
     status_json "setup-required" "local-runtime-not-installed"
     ;;
-  panel-state)
+  panel-state|panel-overview)
     if runtime_available; then
-      exec "$runtime_cli" panel-state --state-dir "$agent_state_dir" --settings-path "$settings_path" \
+      exec "$runtime_cli" "$action" --state-dir "$agent_state_dir" --settings-path "$settings_path" \
         --drafts-path "$drafts_path" --activity-path "$activity_path"
     fi
     status_json "setup-required" "local-runtime-not-installed"
@@ -242,6 +246,15 @@ case "$action" in
     runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
     [[ -d $catalog_root && ! -L $catalog_root ]] || fail "the owner-local catalog is unavailable"
     exec "$runtime_cli" query --catalog "$catalog_root" --activity-path "$activity_path"
+    ;;
+  check)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    exec "$runtime_cli" check --catalog "$catalog_root" --settings-path "$settings_path" \
+      --drafts-path "$drafts_path" --query-state "$runtime_root/queries" --activity-path "$activity_path"
+    ;;
+  query-policy-show|query-policy-apply)
+    runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }
+    exec "$runtime_cli" "$action" --settings-path "$settings_path"
     ;;
   agent-status)
     runtime_available || { status_json "setup-required" "local-runtime-not-installed"; exit 0; }

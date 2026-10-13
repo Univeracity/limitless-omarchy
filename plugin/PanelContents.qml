@@ -678,12 +678,12 @@ Item {
           Button {
             width: 216
             height: root.controlHeight
-            text: "Check this device"
+            text: "Check reusable work"
             selected: true
             bordered: true
             focusable: true
             enabled: !root.commandRunning
-            onClicked: if (root.panel) root.panel.queryCatalog()
+            onClicked: if (root.panel) root.panel.checkLibrary()
           }
 
           Button {
@@ -704,12 +704,27 @@ Item {
           }
         }
 
+        Button {
+          visible: root.panel && root.panel.runtimeReady && !root.panel.settingsModalOpen
+            && (root.panel.serviceReady || root.panel.queryExecutionMode === "service")
+          width: parent.width
+          height: root.controlHeight
+          text: "Include public Library when needed"
+          selected: root.panel && root.panel.queryExecutionMode === "service"
+          bordered: true
+          focusable: true
+          enabled: root.panel && root.panel.queryPolicyLoaded && !root.commandRunning
+          onClicked: if (root.panel) root.panel.setPublicSearch(root.panel.queryExecutionMode !== "service")
+        }
+
         Text {
           textFormat: Text.PlainText
           visible: root.panel && root.panel.runtimeReady && !root.panel.settingsModalOpen
           width: parent.width
           wrapMode: Text.Wrap
-          text: "Matches include reviewed components and source-free methods. Check that a match fits your system before using it."
+          text: root.panel && root.panel.queryExecutionMode === "service"
+            ? "Local first. You and connected agents may send concise objectives to the public Library if local work does not fit. Sharing has its own settings."
+            : "This device only. Public fallback sends concise objectives when local work does not fit. Applies to you and connected agents; sharing is separate."
           color: Color.popups.text
           opacity: 0.58
           font.family: Style.font.family

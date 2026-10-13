@@ -69,8 +69,13 @@ Direct installation steps:
 4. Select the Limitless `<` button on the right side of the bar.
 5. Select **Install local runtime**.
 6. Describe what you are about to make or change, then select
-   **Check this device**. If you connect the service, **Check public Library**
-   looks for more work with the same objective.
+   **Check reusable work**. It searches this device first. After connecting the
+   service, **Include public Library when needed** explicitly permits fallback
+   searches for both the panel and connected agents. Sharing stays separate.
+
+The released 0.2.1 interface uses **Check this device** and a separate
+**Check public Library** action. The unified search above is being qualified
+for the next coordinated release; see [Objective search](docs/OBJECTIVE-SEARCH.md).
 
 Typing and input-method editing stay native. Paste uses **Paste**, Ctrl+V,
 Shift+Insert, or middle-click for the primary selection. An isolated reader
@@ -299,6 +304,11 @@ review boundary and [runtime smoke testing](docs/RUNTIME-SMOKE.md) for the
 real-session validation path.
 
 ## Develop and verify
+
+The development branch's next search path is described in
+[Objective search](docs/OBJECTIVE-SEARCH.md). It adds the shared Library kernel
+and separate public-search consent while preserving the released client and
+settings contracts; it requires coordinated candidate bundles before release.
 
 ```bash
 python3 -m pip install --no-index --no-deps \

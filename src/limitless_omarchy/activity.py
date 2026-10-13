@@ -185,7 +185,7 @@ def record_query(path: Path | None, result: dict[str, Any], *, channel: str) -> 
             "exact-adoption": "exact-component",
             "method-guided": "source-free-method",
             "abstain": "abstain",
-        }.get(str(result.get("treatment") or ""), "")
+        }.get(str(result.get("treatment") or ""), str(result.get("treatment") or ""))
     if disposition not in {"exact-component", "source-free-method", "abstain"}:
         return False
 

@@ -13,13 +13,16 @@ from limitless_library.catalog import CatalogError, LocalCatalog
 from limitless_library.contracts import strict_json_loads
 from limitless_library.mcp_compat import LibraryToolDispatcher
 from limitless_library.mcp_protocol import McpToolCallError, McpToolDispatcher, McpToolSession, jsonrpc_error
+from limitless_library.mcp_server import OBJECTIVE_INSTRUCTIONS, OBJECTIVE_TOOL_NAME, objective_tool
 from limitless_library.mcp_server import TOOL_NAME as GENERAL_TOOL_NAME
+from limitless_library.objective_query import ObjectiveQueryEngine, ObjectiveQueryError
 from limitless_library.schemas import load_schema
 
 from .activity import record_lifecycle, record_query
 from .adapter import Runner, _default_runner, query_local_catalog
 from .contributions import ContributionError, schedule_contribution_sync
 from .drafts import DraftError, register_method
+from .objective import objective_engine as build_objective_engine
 from .settings import SettingsError, load_settings
 from .version import VERSION
 
@@ -224,8 +227,21 @@ def _dispatcher(
     activity_path: Path | None = None,
     settings_path: Path | None = None,
     drafts_path: Path | None = None,
+    objective_engine: ObjectiveQueryEngine | None = None,
 ) -> McpToolDispatcher:
     def call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        if name == OBJECTIVE_TOOL_NAME and objective_engine is not None:
+            try:
+                result = objective_engine.check(arguments)
+                channel = (
+                    "service"
+                    if result["coverage"]["service"] in {"complete", "unavailable", "verification-failed"}
+                    else "general"
+                )
+                record_query(activity_path, result, channel=channel)
+                return result
+            except (ObjectiveQueryError, CatalogError, OSError, ValueError) as error:
+                raise McpToolCallError(str(error)) from error
         if name == GENERAL_TOOL_NAME:
             try:
                 result = LocalCatalog(Path(catalog)).query(arguments)
@@ -276,11 +292,14 @@ def _dispatcher(
         except ValueError as error:
             raise McpToolCallError(str(error)) from error
 
+    tools = [_general_tool(), _tool(), _register_method_tool()]
+    if objective_engine is not None:
+        tools.append(objective_tool(service_queries=True))
     return LibraryToolDispatcher(
         server_name=SERVER_NAME,
         server_version=SERVER_VERSION,
-        instructions=_instructions(settings_path),
-        tools=[_general_tool(), _tool(), _register_method_tool()],
+        instructions=_instructions(settings_path) + (OBJECTIVE_INSTRUCTIONS if objective_engine is not None else ""),
+        tools=tools,
         call_tool=call_tool,
         cache_scope="private",
     )
@@ -331,6 +350,9 @@ def serve(
     activity_path: Path | None = None,
     settings_path: Path | None = None,
     drafts_path: Path | None = None,
+    query_policy_path: Path | None = None,
+    query_state: Path | None = None,
+    method_store: Path | None = None,
 ) -> None:
     """Run the local stdio MCP server."""
 
@@ -342,6 +364,15 @@ def serve(
             activity_path=activity_path,
             settings_path=settings_path,
             drafts_path=drafts_path,
+            objective_engine=build_objective_engine(
+                catalog,
+                settings_path=settings_path,
+                drafts_path=drafts_path,
+                query_policy_path=query_policy_path,
+                query_state=query_state,
+                method_store=method_store,
+                omarchy_release=omarchy_release,
+            ),
         )
     )
     for line, framing_error in _bounded_lines(sys.stdin.buffer):
@@ -366,6 +397,9 @@ def main() -> None:
     parser.add_argument("--activity-path", type=Path)
     parser.add_argument("--settings-path", type=Path)
     parser.add_argument("--drafts-path", type=Path)
+    parser.add_argument("--query-policy", type=Path)
+    parser.add_argument("--query-state", type=Path)
+    parser.add_argument("--method-store", type=Path)
     args = parser.parse_args()
     serve(
         args.catalog,
@@ -373,6 +407,9 @@ def main() -> None:
         activity_path=args.activity_path,
         settings_path=args.settings_path,
         drafts_path=args.drafts_path,
+        query_policy_path=args.query_policy,
+        query_state=args.query_state,
+        method_store=args.method_store,
     )
 
 
