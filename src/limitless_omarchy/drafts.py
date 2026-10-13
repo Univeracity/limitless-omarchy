@@ -20,8 +20,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from limitless_library.catalog import CatalogError, seal_capsule
+from limitless_library.catalog import CatalogError
 from limitless_library.contracts import canonical_json_bytes, sha256_json
+from limitless_library.method_projection import project_method_capsule
 
 from .contributions import ContributionError, contribution_states, initialize_contribution
 from .settings import CONTRIBUTION_MODES, DESTINATIONS, MATERIAL_POLICIES, SettingsError, load_settings
@@ -269,31 +270,16 @@ def _capsule(record: dict[str, Any]) -> dict[str, Any]:
         if task_kind == "omarchy-customization"
         else {"constraints": [], "toolchain": {}}
     )
-    draft = {
-        "schemaVersion": "limitless.capsule/0.1",
-        "id": f"capsule:local.{_slug(str(record['title']))}.{suffix[:10]}",
-        "version": f"0.1.{int(record['revision']) - 1}",
-        "title": str(record["title"]),
-        "license": "LicenseRef-Limitless-Source-Free-Method",
-        "offers": [
-            {
-                "id": f"offer:local.{suffix.lower()}",
-                "kind": "method",
-                "priority": 500,
-                "taskKind": task_kind,
-                "compatibility": compatibility,
-                "policy": {"allowedUses": ["adopt", "instantiate"], "tenantScopes": ["private"], "state": "active"},
-                "files": None,
-                "method": {
-                    "summary": record["method"]["summary"],
-                    "steps": record["method"]["steps"],
-                    "verification": record["method"]["verification"],
-                },
-            }
-        ],
-    }
     try:
-        return seal_capsule(draft, Path("."))
+        return project_method_capsule(
+            capsule_id=f"capsule:local.{_slug(str(record['title']))}.{suffix[:10]}",
+            offer_id=f"offer:local.{suffix.lower()}",
+            version=f"0.1.{int(record['revision']) - 1}",
+            title=str(record["title"]),
+            task_kind=task_kind,
+            method=record["method"],
+            compatibility=compatibility,
+        )
     except CatalogError as error:
         raise DraftError("registered method could not be projected into the local catalog") from error
 

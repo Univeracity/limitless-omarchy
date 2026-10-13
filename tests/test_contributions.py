@@ -19,11 +19,30 @@ from limitless_omarchy.contributions import (
     sync_contributions,
     transition_contribution,
 )
-from limitless_omarchy.drafts import DraftError, list_drafts, load_draft, register_method
+from limitless_omarchy.drafts import DraftError, _capsule, list_drafts, load_draft, register_method
 from limitless_omarchy.mcp_server import REGISTER_METHOD_TOOL_NAME, handle_message
 from limitless_omarchy.settings import SettingsError, default_settings, load_settings, save_settings
 
 POLICY_DIGEST = "sha256:" + "3" * 64
+
+
+def test_shared_core_projection_preserves_the_original_omarchy_capsule_digest() -> None:
+    # Digest produced by the published 0.2.1 projection for this original-format draft.
+    # A projection refactor must not invalidate existing decisions or rewrite records.
+    record = {
+        "draftRef": "draft:01K4X6R5N90W21B9MG3PA5VNZ8",
+        "title": "Verify package promotion",
+        "taskKind": "omarchy-customization",
+        "revision": 2,
+        "method": {
+            "summary": "Bind promoted packages to their verified bytes.",
+            "steps": ["Check package digest before promotion.", "Recheck promoted bytes."],
+            "verification": ["The promoted package digest matches."],
+        },
+    }
+    assert (
+        _capsule(record)["capsuleDigest"] == "sha256:d9881dc05af9d3e4c84a3d5e02b4d9ea45e3ef8fe827e7b5719a468414c8c99d"
+    )
 
 
 def _paths(tmp_path: Path) -> tuple[Path, Path, Path]:

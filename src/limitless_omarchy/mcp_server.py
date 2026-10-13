@@ -11,6 +11,7 @@ from typing import Any
 
 from limitless_library.catalog import CatalogError, LocalCatalog
 from limitless_library.contracts import strict_json_loads
+from limitless_library.mcp_compat import LibraryToolDispatcher
 from limitless_library.mcp_protocol import McpToolCallError, McpToolDispatcher, McpToolSession, jsonrpc_error
 from limitless_library.mcp_server import TOOL_NAME as GENERAL_TOOL_NAME
 from limitless_library.schemas import load_schema
@@ -275,7 +276,7 @@ def _dispatcher(
         except ValueError as error:
             raise McpToolCallError(str(error)) from error
 
-    return McpToolDispatcher(
+    return LibraryToolDispatcher(
         server_name=SERVER_NAME,
         server_version=SERVER_VERSION,
         instructions=_instructions(settings_path),
