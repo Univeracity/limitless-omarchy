@@ -257,7 +257,10 @@ def _dispatcher(
                 raise McpToolCallError(str(error)) from error
         if name == GENERAL_TOOL_NAME:
             try:
-                result = LocalCatalog(Path(catalog)).query(arguments)
+                # Core retains a working legacy decision and its binding;
+                # original generic captures can fill an actual abstention.
+                local = objective_engine.catalog if objective_engine is not None else LocalCatalog(Path(catalog))
+                result = local.query(arguments)
                 record_query(activity_path, result, channel="general")
                 if drafts_path is not None:
                     try:

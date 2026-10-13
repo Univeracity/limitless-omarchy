@@ -39,7 +39,10 @@ with partial coverage visible. Query readers do not create writer locks or
 edit method records. The snapshot follows the 2,000-record native draft bound.
 
 The old `query`, `service-query`, `provider`, and registration inputs remain
-available. Lower-level `check` accepts a bounded JSON line with only an
+available. The generic structured MCP query also delegates to the core local
+snapshot: a working original selection or abstention keeps its complete binding;
+an original generic capture can fill an actual missing match. It remains local.
+Lower-level `check` accepts a bounded JSON line with only an
 `objective`; `query-policy-show` and `query-policy-apply` inspect or save the
 separate preference. Advanced receiver policy remains the Library's shared
 contract, rather than a second Omarchy policy implementation.
