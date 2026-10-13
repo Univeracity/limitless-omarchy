@@ -57,11 +57,11 @@ jobs:
             --head "$TEST_HEAD_SHA" \
             --run
       - name: Lint
-        run: ruff check src tests .github/scripts scripts/read-clipboard.py
+        run: ruff check src tests .github/scripts scripts/read-clipboard.py scripts/inventory-release-wheel.py
       - name: Check formatting
-        run: ruff format --check src tests .github/scripts scripts/read-clipboard.py
+        run: ruff format --check src tests .github/scripts scripts/read-clipboard.py scripts/inventory-release-wheel.py
       - name: Static security scan
-        run: bandit -r -q src scripts/read-clipboard.py
+        run: bandit -r -q src scripts/read-clipboard.py scripts/inventory-release-wheel.py
       - name: Dependency vulnerability scan
         run: pip-audit --local --progress-spinner off
       - name: Exercise the reviewed panel runtime setup

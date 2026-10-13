@@ -6,6 +6,12 @@ The existing verified listing remains at `0.1.1` until the update is approved.
 This guide records the review boundary and the process for qualifying a newer
 commit; it does not claim a security certification.
 
+For review of the existing adapter wheel, see the
+[complete contents/source mapping](WHEEL-INVENTORY.md). It covers all 19 wheel
+members, including generated metadata outside the package prefix. This evidence
+is separate from an update request; it preserves the published wheel and current
+review target.
+
 Authoritative process references:
 
 - [Marketplace submission guide](https://github.com/omacom/omarchy-plugin-marketplace/blob/main/SUBMISSION.md)
