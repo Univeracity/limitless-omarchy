@@ -1,0 +1,107 @@
+name: Released adapter wheel contents and source
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/wheel-inventory.yml
+      - scripts/inventory-release-wheel.py
+      - tests/test_wheel_inventory.py
+      - docs/releases/0.2.1-wheel-inventory.json
+      - docs/WHEEL-INVENTORY.md
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/wheel-inventory.yml
+      - scripts/inventory-release-wheel.py
+      - tests/test_wheel_inventory.py
+      - docs/releases/0.2.1-wheel-inventory.json
+      - docs/WHEEL-INVENTORY.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    name: Map all files in the existing released adapter wheel
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: tooling
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: c2e303ba63024ee4e1c4cbc595488fa9dfef7170
+          path: release-source
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install the exact declared metadata backend
+        run: python -m pip install setuptools==83.0.0 pytest==9.1.1
+      - name: Test missing, altered and extra archive members
+        run: python -m pytest -q tooling/tests/test_wheel_inventory.py
+      - name: Download the existing public release wheel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v0.2.1 --repo Univeracity/limitless-omarchy \
+            --pattern limitless_omarchy-0.2.1-py3-none-any.whl --dir input
+      - name: Check complete inventory and exact regenerated metadata
+        run: |
+          python tooling/scripts/inventory-release-wheel.py \
+            --source-root release-source \
+            --recipe tooling/docs/releases/0.2.1-wheel-inventory.json \
+            --wheel input/limitless_omarchy-0.2.1-py3-none-any.whl \
+            --output proof
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: adapter-wheel-inventory
+          path: proof/*
+          if-no-files-found: error
+          retention-days: 90
+
+  authenticate:
+    name: Authenticate and verify the complete source mapping
+    needs: inventory
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: adapter-wheel-inventory
+          path: proof
+      - name: Sign the mapping for the original wheel digest
+        id: attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: proof/limitless_omarchy-0.2.1-py3-none-any.whl
+          predicate-type: https://github.com/Univeracity/limitless-omarchy/releases/wheel-inventory/v1
+          predicate-path: proof/wheel-inventory.json
+      - name: Verify repository, workflow and signed contents mapping
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ATTESTATION_BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          gh attestation verify proof/limitless_omarchy-0.2.1-py3-none-any.whl \
+            --repo "$GH_REPO" \
+            --signer-workflow "$GH_REPO/.github/workflows/wheel-inventory.yml" \
+            --predicate-type https://github.com/Univeracity/limitless-omarchy/releases/wheel-inventory/v1 \
+            --format json > proof/verification.json
+          cp "$ATTESTATION_BUNDLE" proof/wheel-inventory.sigstore.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: authenticated-adapter-wheel-inventory
+          path: proof/*
+          if-no-files-found: error
+          retention-days: 90

@@ -11,6 +11,7 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path, PurePosixPath
 
 ALL_TESTS = (
+    "tests/test_wheel_inventory.py",
     "tests/test_clipboard.py",
     "tests/test_objective_input_qt.py",
     "tests/test_adapter.py",
@@ -61,7 +62,14 @@ def plan_changes(paths: Iterable[str]) -> dict[str, object]:
 
     for raw in normalized:
         path = PurePosixPath(raw)
-        if raw in FULL_PATHS:
+        if raw in {
+            "scripts/inventory-release-wheel.py",
+            ".github/workflows/wheel-inventory.yml",
+            "docs/releases/0.2.1-wheel-inventory.json",
+        }:
+            tests.add("tests/test_wheel_inventory.py")
+            reasons.append(f"release contents/source evidence changed: {raw}")
+        elif raw in FULL_PATHS:
             full = True
             package_gate = True
             omarchy_contract = True

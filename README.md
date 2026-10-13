@@ -298,6 +298,10 @@ See [marketplace submission notes](docs/MARKETPLACE-SUBMISSION.md) for the exact
 review boundary and [runtime smoke testing](docs/RUNTIME-SMOKE.md) for the
 real-session validation path.
 
+The [complete adapter wheel inventory](docs/WHEEL-INVENTORY.md) maps every
+released package, license, and installation metadata file to its source or
+checked generation, with public workflow authentication.
+
 ## Develop and verify
 
 ```bash
