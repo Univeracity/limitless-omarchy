@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "limitless.adapter-wheel-inventory-recipe/1",
+  "source": {
+    "repository": "https://github.com/Univeracity/limitless-omarchy",
+    "commit": "2539abfe125542c4845918e6f1893e0dddd1660f"
+  },
+  "wheel": {
+    "name": "limitless_omarchy-0.2.2-py3-none-any.whl",
+    "sha256": "c83931302d5225315f2a3eae7a7802e20b26ad9349885d19ed1a89544c2788b0",
+    "bundledPath": "runtime/wheels/limitless_omarchy-0.2.2-py3-none-any.whl"
+  },
+  "metadataBackend": {
+    "name": "setuptools.build_meta",
+    "version": "83.0.0"
+  }
+}

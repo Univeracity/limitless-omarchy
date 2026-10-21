@@ -16,7 +16,7 @@ INVENTORY = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(INVENTORY)
 WHEEL = ROOT / "runtime/wheels/limitless_omarchy-0.2.2-py3-none-any.whl"
 INFO = "limitless_omarchy-0.2.2.dist-info/"
-COMMIT = "c2e303ba63024ee4e1c4cbc595488fa9dfef7170"
+COMMIT = "2539abfe125542c4845918e6f1893e0dddd1660f"
 
 
 @pytest.fixture(scope="module")

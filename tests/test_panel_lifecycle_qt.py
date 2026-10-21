@@ -11,10 +11,9 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QSG_RHI_BACKEND", "software")
 pytest.importorskip("PySide6", reason="Run the dedicated Qt job for this gate.")
-from PySide6.QtCore import QMetaObject, QObject, QUrl
+from PySide6.QtCore import QCoreApplication, QEvent, QMetaObject, QObject, QUrl
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQuick import QQuickView
-from shiboken6 import delete
 
 ROOT = Path(__file__).parents[1]
 
@@ -82,7 +81,8 @@ Item {
         panel.setProperty("runtimeReady", runtime_ready)
         assert QMetaObject.invokeMethod(panel, "enqueue")
         if destroyed:
-            delete(panel)
+            panel.deleteLater()
+            QCoreApplication.sendPostedEvents(panel, QEvent.DeferredDelete)
         app.processEvents()
         return host.property("actions"), warnings
     finally:
