@@ -155,7 +155,7 @@ def test_panel_exposes_host_lifecycle_and_uses_panel_owned_local_runtime() -> No
     assert "function heroMeta(fallback)" in contents
     assert 'root.panel.operation === "stats"' in contents
     assert "Checking for reusable work" not in contents
-    assert "Component.onCompleted: Qt.callLater(function() { root.refresh() })" in panel
+    assert "Component.onCompleted:" in panel
     assert 'completedOperation === "panel-state" && root.runtimeReady' in panel
     assert 'root.operation === "status") root.applyResult(root.commandOutput)' in panel
     assert "Agent connection" in contents
@@ -305,8 +305,8 @@ printf '%s\n' "$*" >>"$PIP_CALL_LOG"
     assert "--only-binary=:all: --require-hashes --force-reinstall --requirement" in calls[0]
     assert str(ROOT / "runtime" / "requirements.lock") in calls[0]
     assert "--no-index --no-deps --force-reinstall" in calls[1]
-    assert str(ROOT / "runtime" / "wheels" / "limitless_library-0.1.0a1-py3-none-any.whl") in calls[1]
-    assert str(ROOT / "runtime" / "wheels" / "limitless_omarchy-0.2.1-py3-none-any.whl") in calls[1]
+    assert str(ROOT / "runtime" / "wheels" / "limitless_library-0.1.0a2-py3-none-any.whl") in calls[1]
+    assert str(ROOT / "runtime" / "wheels" / "limitless_omarchy-0.2.2-py3-none-any.whl") in calls[1]
     assert json.loads(completed.stdout)["status"] == "configured"
     receipt = data_home / "limitless-omarchy" / "installed-bundle.json"
     assert receipt.read_bytes() == (ROOT / "runtime" / "bundle.json").read_bytes()

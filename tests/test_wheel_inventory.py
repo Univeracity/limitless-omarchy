@@ -14,8 +14,8 @@ SPEC = importlib.util.spec_from_file_location("wheel_inventory", ROOT / "scripts
 assert SPEC is not None and SPEC.loader is not None
 INVENTORY = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(INVENTORY)
-WHEEL = ROOT / "runtime/wheels/limitless_omarchy-0.2.1-py3-none-any.whl"
-INFO = "limitless_omarchy-0.2.1.dist-info/"
+WHEEL = ROOT / "runtime/wheels/limitless_omarchy-0.2.2-py3-none-any.whl"
+INFO = "limitless_omarchy-0.2.2.dist-info/"
 COMMIT = "c2e303ba63024ee4e1c4cbc595488fa9dfef7170"
 
 
@@ -58,7 +58,7 @@ def test_existing_wheel_has_a_complete_source_and_generation_mapping(baseline) -
     assert all(file["installationScheme"] == "purelib" for file in files)
 
 
-@pytest.mark.parametrize("path", ["unexpected.pth", "limitless_omarchy-0.2.1.data/scripts/unexpected"])
+@pytest.mark.parametrize("path", ["unexpected.pth", "limitless_omarchy-0.2.2.data/scripts/unexpected"])
 def test_extra_installed_file_outside_the_package_is_rejected(tmp_path: Path, baseline, path: str) -> None:
     changed = changed_wheel(tmp_path / "extra.whl", changes={path: b"unexpected payload\n"})
     with pytest.raises(ValueError, match="complete wheel file set"):

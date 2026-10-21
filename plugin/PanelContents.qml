@@ -24,7 +24,7 @@ Item {
   function scrollToTop() {
     pendingScrollReset = true
     panelFlick.contentY = 0
-    Qt.callLater(function() { panelFlick.contentY = 0 })
+    Qt.callLater(function() { if (panelFlick) panelFlick.contentY = 0 })
     scrollResetTimer.restart()
   }
 

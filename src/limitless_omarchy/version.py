@@ -1,3 +1,3 @@
 """Release identity shared by the Omarchy adapter surfaces."""
 
-VERSION = "0.2.1"
+VERSION = "0.2.2"

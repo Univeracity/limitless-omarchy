@@ -4,6 +4,8 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).parents[1]
 SCRIPT = ROOT / ".github" / "scripts" / "changed_test_scope.py"
 SPEC = importlib.util.spec_from_file_location("changed_test_scope", SCRIPT)
@@ -50,7 +52,11 @@ def test_mcp_change_selects_query_and_contribution_contracts() -> None:
 def test_qml_change_selects_plugin_and_visual_contracts() -> None:
     result = plan("plugin/PanelContents.qml")
 
-    assert result["tests"] == ["tests/test_objective_input_qt.py", "tests/test_plugin_contract.py"]
+    assert result["tests"] == [
+        "tests/test_objective_input_qt.py",
+        "tests/test_panel_lifecycle_qt.py",
+        "tests/test_plugin_contract.py",
+    ]
     assert result["omarchyContractRequired"] is True
     assert result["visualGateRecommended"] is True
 
@@ -91,11 +97,27 @@ def test_build_contract_change_fails_safe_to_full_suite() -> None:
     assert result["omarchyContractRequired"] is True
 
 
+def test_full_scope_covers_every_root_python_test_file() -> None:
+    inventory = {path.relative_to(ROOT).as_posix() for path in (ROOT / "tests").glob("test_*.py")}
+    assert set(SCOPE.ALL_TESTS) == inventory
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["scripts/limitless-omarchy-runtime", "runtime/bundle.json", "runtime/wheels/limitless_omarchy.whl"],
+)
+def test_runtime_changes_include_installed_runtime_update_regressions(path: str) -> None:
+    result = plan(path)
+    assert result["mode"] == "targeted"
+    assert "tests/test_runtime_update.py" in result["tests"]
+    assert result["packageGateRequired"] is True
+
+
 def test_runtime_bundle_change_selects_release_contract_without_expanding_unnecessarily() -> None:
     result = plan("runtime/requirements.lock")
 
     assert result["mode"] == "targeted"
-    assert result["tests"] == ["tests/test_plugin_contract.py"]
+    assert result["tests"] == ["tests/test_plugin_contract.py", "tests/test_runtime_update.py"]
     assert result["packageGateRequired"] is True
     assert result["omarchyContractRequired"] is True
 

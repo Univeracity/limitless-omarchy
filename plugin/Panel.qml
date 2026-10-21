@@ -149,7 +149,7 @@ Item {
     agentReportNeeded = false
     opened = true
     refresh()
-    Qt.callLater(function() { if (opened) keyCatcher.forceActiveFocus() })
+    Qt.callLater(function() { if (root && root.opened && keyCatcher) keyCatcher.forceActiveFocus() })
   }
 
   function close() {
@@ -847,18 +847,19 @@ Item {
       else root.errorText = root.commandError !== "" ? root.commandError : "The local runtime is unavailable."
       root.pendingInput = ""
       root.operation = ""
+      // A handler's delayed closure can outlive its panel during reload.
       if (completedOperation === "setup")
-        Qt.callLater(function() { if (root.opened) root.refresh() })
+        Qt.callLater(function() { if (root && root.opened) root.refresh() })
       else if (completedOperation === "panel-state" && root.runtimeReady)
-        Qt.callLater(function() { if (root.opened) root.inspectService() })
+        Qt.callLater(function() { if (root && root.opened) root.inspectService() })
       else if (completedOperation === "settings-apply")
-        Qt.callLater(function() { if (root.opened && root.runtimeReady) root.refreshDrafts() })
+        Qt.callLater(function() { if (root && root.opened && root.runtimeReady) root.refreshDrafts() })
       else if (completedOperation === "contribution-transition")
-        Qt.callLater(function() { if (root.opened && root.runtimeReady) root.refreshDrafts() })
+        Qt.callLater(function() { if (root && root.opened && root.runtimeReady) root.refreshDrafts() })
     }
   }
 
-  Component.onCompleted: Qt.callLater(function() { root.refresh() })
+  Component.onCompleted: Qt.callLater(function() { if (root) root.refresh() })
 
   PanelWindow {
     id: panelWindow

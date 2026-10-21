@@ -235,7 +235,7 @@ For offline development against a local Limitless Library checkout:
 
 ```bash
 python3 -m pip install --no-index --no-deps \
-  runtime/wheels/limitless_library-0.1.0a1-py3-none-any.whl
+  runtime/wheels/limitless_library-0.1.0a2-py3-none-any.whl
 python3 -m pip install --no-deps -e .
 ```
 
@@ -306,7 +306,7 @@ checked generation, with public workflow authentication.
 
 ```bash
 python3 -m pip install --no-index --no-deps \
-  runtime/wheels/limitless_library-0.1.0a1-py3-none-any.whl
+  runtime/wheels/limitless_library-0.1.0a2-py3-none-any.whl
 python3 -m pip install -e '.[dev]'
 python3 scripts/verify-runtime-bundle.py --root .
 pytest

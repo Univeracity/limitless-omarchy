@@ -14,12 +14,14 @@ ALL_TESTS = (
     "tests/test_wheel_inventory.py",
     "tests/test_clipboard.py",
     "tests/test_objective_input_qt.py",
+    "tests/test_panel_lifecycle_qt.py",
     "tests/test_adapter.py",
     "tests/test_activity.py",
     "tests/test_agent_connection.py",
     "tests/test_changed_test_scope.py",
     "tests/test_contributions.py",
     "tests/test_plugin_contract.py",
+    "tests/test_runtime_update.py",
 )
 DOC_PREFIXES = ("docs/",)
 FULL_PATHS = {
@@ -80,6 +82,7 @@ def plan_changes(paths: Iterable[str]) -> dict[str, object]:
         elif raw.startswith(("plugin/", "tests/runtime/")):
             tests.add("tests/test_plugin_contract.py")
             tests.add("tests/test_objective_input_qt.py")
+            tests.add("tests/test_panel_lifecycle_qt.py")
             package_gate = True
             omarchy_contract = True
             visual_gate = path.suffix == ".qml"
@@ -95,10 +98,13 @@ def plan_changes(paths: Iterable[str]) -> dict[str, object]:
             reasons.append("bounded clipboard reader changed")
         elif raw == "scripts/limitless-omarchy-runtime" or raw == "scripts/smoke-omarchy-panel":
             tests.add("tests/test_plugin_contract.py")
+            if raw == "scripts/limitless-omarchy-runtime":
+                tests.add("tests/test_runtime_update.py")
             package_gate = True
             reasons.append(f"panel runtime changed: {raw}")
         elif raw.startswith("runtime/"):
             tests.add("tests/test_plugin_contract.py")
+            tests.add("tests/test_runtime_update.py")
             package_gate = True
             omarchy_contract = True
             reasons.append(f"reviewed runtime bundle changed: {raw}")
