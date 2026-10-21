@@ -69,7 +69,7 @@ jobs:
         run: |
           runtime_data="$(mktemp -d)"
           XDG_DATA_HOME="$runtime_data" scripts/limitless-omarchy-runtime setup --plugin-root . > /tmp/limitless-omarchy-runtime-setup.json
-          "$runtime_data/limitless-omarchy/runtime/bin/python" -c "import limitless_library, limitless_omarchy; assert limitless_omarchy.__version__ == '0.2.1'"
+          "$runtime_data/limitless-omarchy/runtime/bin/python" -c "import limitless_library, limitless_omarchy; assert limitless_omarchy.__version__ == '0.2.2'"
       - name: Build source distribution
         if: matrix.python-version == '3.11'
         run: python -m build --sdist --outdir dist
